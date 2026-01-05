@@ -1,0 +1,66 @@
+/************************************************************************/
+/*                                                                      */
+/*    Beispielprogramm:                                 APPL_READ()     */
+/*                                                      APPL_WRITE()    */
+/*                                                      APPL_FIND()     */
+/*                                                                      */
+/*    Copyright (c)  Heimsoeth & Borland  1988                          */
+/*                                                                      */
+/************************************************************************/
+
+/* -------------------------------------------------------------------- */
+/*    Include-Files einbinden.                                          */
+/* -------------------------------------------------------------------- */
+
+#include <aes.h>
+#include <string.h>
+
+/* -------------------------------------------------------------------- */
+/*    Konstantendefinitionen.                                           */
+/* -------------------------------------------------------------------- */
+
+#define BUFSIZE               22
+
+#define EOS                   '\0'
+
+#define PRG_NAME              "SENDER.PRG"
+#define RMESS                 "[1][Hello world][Hey]"
+#define SMESS                 "[1][Greetings..][Bey]"
+
+/* -------------------------------------------------------------------- */
+/*    Extern definierte globale Variablen.                              */
+/* -------------------------------------------------------------------- */
+
+extern int gl_apid;
+
+/* -------------------------------------------------------------------- */
+/*    test_fkt()                                          test function */
+/*                                                                      */
+/*    Funktion, die dem Austesten dient (hier: appl_find() etc.).       */
+/* -------------------------------------------------------------------- */
+
+void test_fkt()
+{
+   int  ap_send;
+   char buffer[BUFSIZE];
+
+   if((ap_send = appl_find(PRG_NAME)) != -1)
+   {
+      if(appl_read(ap_send, 21, buffer) > 0)
+      {
+         buffer[21] = EOS;
+         if(strcmp(buffer, RMESS) != 0)
+            appl_write(ap_send, 21, SMESS);
+      }
+      else
+         form_alert(1, "[3][Niemand meldet sich.][Abbruch]");
+   }
+   else
+      form_alert(1, "[3][Kein Sendeprogramm aktiv.][Abbruch]");
+}
+
+/* -------------------------------------------------------------------- */
+/*    Ende der Beispielprogramms fÅr APPL_READ(), APPL_WRITE() und      */
+/*    APPL_FIND().                                                      */
+/* -------------------------------------------------------------------- */
+

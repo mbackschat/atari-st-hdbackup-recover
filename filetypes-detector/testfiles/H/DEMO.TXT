@@ -1,0 +1,84 @@
+/*
+ * ASCII.H   -   Definition der ASCII Steuerzeichen und Controlcodes
+ *
+ *               RDS - Software  12.7.1985
+ */
+
+#define   NUL   0x00
+#define   SOH   0x01   /* Start of heading, Datenblockanfang */
+#define   STX   0x02   /* Start of Text */
+#define   ETX   0x03   /* End of Text */
+#define   EOT   0x04   /* End of Tape, Uebertragungsende */
+#define   ENQ   0x05
+#define   ACK   0x06   /* Acknowledge, Einverstanden */
+#define   BEL   0x07   /* Bell, Klingelzeichen */
+#define   BS    0x08   /* Backspace */
+#define   HT    0x09   /* Horizontal Tabulator */
+#define   TAB   0x09   /* Tabulatorzeichen */
+#define   LF    0x0a   /* Linefeed */
+#define   VT    0x0b   /* Vertikal Tabulator */
+#define   FF    0x0c   /* Formfeed */
+#define   CR    0x0d   /* Carriage Return */
+#define   SO    0x0e   /* Shift out */
+#define   SI    0x0f   /* Shift in */
+#define   DLE   0x10
+#define   DC1   0x11   /* Device control codes */
+#define   DC2   0x12
+#define   DC3   0x13
+#define   DC4   0x14
+#define   NAK   0x15   /* Not acknowledged, nicht einverstanden */
+#define   SYN   0x16   /* Synchronisierungszeichen */
+#define   ETB   0x17
+#define   CAN   0x18   /* Cancel, Abbruch der Uebertragung */
+#define   EM    0x19
+#define   SUB   0x1a
+#define   ESC   0x1b   /* Escape */
+#define   FS    0x1c
+#define   GS    0x1d
+#define   RS    0x1e
+#define   US    0x1f
+#define   SPACE 0x20   /* Leerzeichen */
+#define   HKO   0x22   /* Hochkomma, Anfuehrungszeichen */
+#define   DEL   0x7f   /* Delete */
+
+#define CTRL_A   1
+#define CTRL_B   2
+#define CTRL_C   3
+#define CTRL_D   4
+#define CTRL_E   5
+#define CTRL_F   6
+#define CTRL_G   7
+#define CTRL_H   8
+#define CTRL_I   9
+#define CTRL_J   10
+#define CTRL_K   11
+#define CTRL_L   12
+#define CTRL_M   13
+#define CTRL_N   14
+#define CTRL_O   15
+#define CTRL_P   16
+#define CTRL_Q   17
+#define CTRL_R   18
+#define CTRL_S   19
+#define CTRL_T   20
+#define CTRL_U   21
+#define CTRL_V   22
+#define CTRL_W   23
+#define CTRL_X   24
+#define CTRL_Y   25
+#define CTRL_Z   26
+
+/*
+ * Der ASCII Zeichensatz :
+ *
+ * 0x00 - 0x1f   Steuerzeichen
+ * 0x20 - 0x2f   Space ! Anfuehrungszeichen #$%&'()*+,-./
+ * 0x30 - 0x39   Ziffern
+ * 0x3a - 0x40   :;<=>?@
+ * 0x41 - 0x5a   Grossbuchstaben
+ * 0x5b - 0x60   [\]^_`
+ * 0x61 - 0x7a   Kleinbuchstaben
+ * 0x7b - 0x7e   {|}~
+ * 0x7f          Delete
+ */
+

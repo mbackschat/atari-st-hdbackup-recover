@@ -1,0 +1,60 @@
+
+
+/*
+ * EZ Reader 
+ * Written by Patrick Bass
+ * (c) 1985 Antic Publishing
+ * V.122485
+ * 
+ */
+
+#define   equals              ==
+#define   is_equivilant_to    ==
+#define   is_assigned         =
+#define   gets                =
+#define   not                 !
+#define   does_not_equal      !=
+#define   plus                +
+#define   minus               -
+#define   is_less_than        <
+#define   is_greater_than     >
+#define   mutlipied_by        *
+#define   times               *
+#define   divided_by          /
+#define   and                 &
+#define   AND                 &&
+#define   or                  |
+#define   OR                  ||
+#define   rotate_left         <<
+#define   rotate_right        >>
+
+
+#define   START               {
+#define   BEGIN               {
+#define   begin               {
+#define   repeat              do
+#define   until               while
+
+#define   end                 }
+#define   END                 }
+#define   enddo               }
+#define   endif               }
+#define   endswitch           }
+#define   endelse             }
+#define   next                }
+#define   wend                }
+
+#define   consider            switch
+#define   YES                 1
+#define   NO                  0
+#define   TRUE                1
+#define   FALSE               0
+
+#define   LOREZ               0
+#define   MEDREZ              1
+#define   HIREZ               2
+
+
+
+
+

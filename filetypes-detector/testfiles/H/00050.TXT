@@ -1,0 +1,33 @@
+#
+#       define some aliases
+#
+
+alias h                 'history'
+alias l                 'ls -avF'
+alias ll                'ls -avFl'
+alias rm                'rm -i'
+alias mv                'mv -i'
+alias rmdir             'rmdir -i'
+alias cp                'cp -i'
+alias e                 'stedi -d e:\etc\stedi'
+alias env               'printenv'
+alias more              'more -t4'
+alias pu                'pushd'
+alias po                'popd'
+alias quit              'logout'
+alias exit              'logout'
+
+alias list              'arc v '
+alias add               'arc a '
+alias del               'arc d '
+alias ex                'arc x '
+alias move              'arc m '
+alias hlp               'arc'
+alias print             'arc p'
+
+#
+#       define a function key
+#
+
+set PF20        = logout
+set PF1         = ll

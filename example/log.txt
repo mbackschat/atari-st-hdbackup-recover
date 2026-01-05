@@ -1,0 +1,449 @@
+File split successfully into 3 parts:
+  Part 1: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E1 (Harddisk Utility, 0-82, 10 Sec)-1.st (10240 bytes)
+  Part 2: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E1 (Harddisk Utility, 0-82, 10 Sec)-2.st (808960 bytes)
+  Part 3: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E1 (Harddisk Utility, 0-82, 10 Sec)-3.st (30720 bytes)
+  Total: 849920 bytes
+File split successfully into 3 parts:
+  Part 1: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E2 (Harddisk Utility, 10 Sec)-1.st (10240 bytes)
+  Part 2: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E2 (Harddisk Utility, 10 Sec)-2.st (808960 bytes)
+  Part 3: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E2 (Harddisk Utility, 10 Sec)-3.st (30720 bytes)
+  Total: 849920 bytes
+File split successfully into 3 parts:
+  Part 1: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E3 (Harddisk Utility, 10 Sec)-1.st (10240 bytes)
+  Part 2: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E3 (Harddisk Utility, 10 Sec)-2.st (808960 bytes)
+  Part 3: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/E3 (Harddisk Utility, 10 Sec)-3.st (30720 bytes)
+  Total: 849920 bytes
+Extracting from: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/disks/carved.bin
+Output directory: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/extracted
+------------------------------------------------------------
+File     1: 00001.TXT - 115 bytes
+File     2: 00002.TXT - 73,477 bytes (compressed)
+File     3: 00003.TXT - 21,267 bytes (compressed)
+File     4: 00004.TXT - 14,045 bytes (compressed)
+File     5: 00005.TXT - 17,439 bytes (compressed)
+File     6: 00006.TXT - 28,759 bytes (compressed)
+File     7: 00007.TXT - 20,714 bytes (compressed)
+File     8: 00008.TXT - 7,342 bytes (compressed)
+File     9: 00009.TXT - 531 bytes
+File    10: 00010.TXT - 857 bytes (compressed)
+File    11: 00011.TXT - 2,406 bytes (compressed)
+File    12: 00012.TXT - 998 bytes (compressed)
+File    13: 00013.TXT - 692 bytes (compressed)
+File    14: 00014.TXT - 11,315 bytes (compressed)
+File    15: 00015.TXT - 4,080 bytes (compressed)
+File    16: 00016.TXT - 84 bytes
+File    17: 00017.TXT - 5,743 bytes (compressed)
+File    18: 00018.TXT - 612 bytes
+File    19: 00019.TXT - 4,563 bytes (compressed)
+File    20: 00020.TXT - 4,442 bytes (compressed)
+File    21: 00021.TXT - 1,974 bytes (compressed)
+File    22: 00022.TXT - 50 bytes
+File    23: 00023.TXT - 3,392 bytes (compressed)
+File    24: 00024.TXT - 501 bytes
+File    25: 00025.TXT - 1,015 bytes (compressed)
+File    26: 00026.TXT - 2,209 bytes (compressed)
+File    27: 00027.TXT - 2,068 bytes (compressed)
+File    28: 00028.TXT - 1,183 bytes (compressed)
+File    29: 00029.TXT - 1,194 bytes (compressed)
+File    30: 00030.TXT - 858 bytes (compressed)
+File    31: 00031.TXT - 28,416 bytes (compressed)
+File    32: 00032.TXT - 928 bytes (compressed)
+File    33: 00033.TXT - 74,298 bytes (compressed)
+File    34: 00034.TXT - 14,699 bytes (compressed)
+File    35: 00035.TXT - 15,108 bytes (compressed)
+File    36: 00036.TXT - 1,991 bytes (compressed)
+File    37: 00037.TXT - 67,641 bytes (compressed)
+File    38: 00038.TXT - 64,822 bytes (compressed)
+File    39: 00039.TXT - 502 bytes
+File    40: 00040.TXT - 503 bytes
+File    41: 00041.TXT - 509 bytes
+File    42: 00042.TXT - 500 bytes
+File    43: 00043.TXT - 23,936 bytes (compressed)
+File    44: 00044.TXT - 85,380 bytes (compressed)
+File    45: 00045.TXT - 846 bytes (compressed)
+File    46: 00046.TXT - 1,856 bytes (compressed)
+File    47: 00047.TXT - 19,938 bytes (compressed)
+File    48: 00048.TXT - 24,762 bytes (compressed)
+File    49: 00049.TXT - 31,680 bytes (compressed)
+File    50: 00050.TXT - 857 bytes (compressed)
+File    51: 00051.TXT - 35,072 bytes (compressed)
+File    52: 00052.TXT - 180 bytes (compressed)
+File    53: 00053.TXT - 12,928 bytes (compressed)
+File    54: 00054.TXT - 514 bytes
+File    55: 00055.TXT - 732 bytes (compressed)
+File    56: 00056.TXT - 55,066 bytes (compressed)
+File    57: 00057.TXT - 353 bytes
+File    58: 00058.TXT - 553 bytes
+File    59: 00059.TXT - 99 bytes
+File    60: 00060.TXT - 17,656 bytes (compressed)
+File    61: 00061.TXT - 47,858 bytes (compressed)
+File    62: 00062.TXT - 25,594 bytes (compressed)
+File    63: 00063.TXT - 11,249 bytes (compressed)
+File    64: 00064.TXT - 11,252 bytes (compressed)
+File    65: 00065.TXT - 38,310 bytes (compressed)
+File    66: 00066.TXT - 20,098 bytes (compressed)
+File    67: 00067.TXT - 13,369 bytes (compressed)
+File    68: 00068.TXT - 12,043 bytes (compressed)
+File    69: 00069.TXT - 11,148 bytes (compressed)
+File    70: 00070.TXT - 10,458 bytes (compressed)
+File    71: 00071.TXT - 14,519 bytes (compressed)
+File    72: 00072.TXT - 8,983 bytes (compressed)
+File    73: 00073.TXT - 7,274 bytes (compressed)
+File    74: 00074.TXT - 11,154 bytes (compressed)
+File    75: 00075.TXT - 18,398 bytes (compressed)
+File    76: 00076.TXT - 13,874 bytes (compressed)
+File    77: 00077.TXT - 11,039 bytes (compressed)
+File    78: 00078.TXT - 47,109 bytes (compressed)
+File    79: 00079.TXT - 19,658 bytes (compressed)
+File    80: 00080.TXT - 79,634 bytes (compressed)
+File    81: 00081.TXT - 604 bytes
+File    82: 00082.TXT - 5,603 bytes
+File    83: 00083.TXT - 404 bytes (compressed)
+File    84: 00084.TXT - 3,630 bytes (compressed)
+File    85: 00085.TXT - 4,000 bytes (compressed)
+File    86: 00086.TXT - 594 bytes
+File    87: 00087.TXT - 1,167 bytes
+File    88: 00088.TXT - 2,791 bytes
+File    89: 00089.TXT - 4,670 bytes (compressed)
+File    90: 00090.TXT - 1,189 bytes
+File    91: 00091.TXT - 13,582 bytes (compressed)
+File    92: 00092.TXT - 1,503 bytes
+File    93: 00093.TXT - 714 bytes
+File    94: 00094.TXT - 3,924 bytes
+File    95: 00095.TXT - 4,792 bytes (compressed)
+File    96: 00096.TXT - 4,852 bytes (compressed)
+File    97: 00097.TXT - 1,485 bytes
+File    98: 00098.TXT - 354 bytes
+File    99: 00099.TXT - 2,563 bytes (compressed)
+File   100: 00100.TXT - 2,566 bytes (compressed)
+File   101: 00101.TXT - 2,517 bytes (compressed)
+File   102: 00102.TXT - 4,640 bytes (compressed)
+File   103: 00103.TXT - 304 bytes
+File   104: 00104.TXT - 10,117 bytes
+File   105: 00105.TXT - 6,644 bytes (compressed)
+File   106: 00106.TXT - 1,678 bytes (compressed)
+File   107: 00107.TXT - 644 bytes (compressed)
+File   108: 00108.TXT - 186 bytes (compressed)
+File   109: 00109.TXT - 292 bytes (compressed)
+File   110: 00110.TXT - 19,691 bytes (compressed)
+File   111: 00111.TXT - 68,563 bytes (compressed)
+File   112: 00112.TXT - 17,509 bytes (compressed)
+File   113: 00113.TXT - 39,870 bytes (compressed)
+File   114: 00114.TXT - 2,182 bytes (compressed)
+File   115: 00115.TXT - 66,385 bytes (compressed)
+File   116: 00116.TXT - 54,298 bytes (compressed)
+File   117: 00117.TXT - 38,312 bytes (compressed)
+File   118: 00118.TXT - 9,599 bytes (compressed)
+File   119: 00119.TXT - 20,291 bytes
+File   120: 00120.TXT - 728 bytes (compressed)
+File   121: 00121.TXT - 61,661 bytes
+File   122: 00122.TXT - 88 bytes
+File   123: 00123.TXT - 89 bytes
+File   124: 00124.TXT - 18,268 bytes (compressed)
+File   125: 00125.TXT - 1,128 bytes (compressed)
+File   126: 00126.TXT - 1,229 bytes (compressed)
+File   127: 00127.TXT - 1,381 bytes
+File   128: 00128.TXT - 1,343 bytes (compressed)
+File   129: 00129.TXT - 1,094 bytes (compressed)
+File   130: 00130.TXT - 1,042 bytes
+File   131: 00131.TXT - 1,358 bytes (compressed)
+File   132: 00132.TXT - 1,383 bytes (compressed)
+File   133: 00133.TXT - 1,085 bytes (compressed)
+File   134: 00134.TXT - 895 bytes (compressed)
+File   135: 00135.TXT - 895 bytes (compressed)
+File   136: 00136.TXT - 895 bytes (compressed)
+File   137: 00137.TXT - 773 bytes
+File   138: 00138.TXT - 678 bytes
+File   139: 00139.TXT - 241 bytes
+File   140: 00140.TXT - 13,059 bytes (compressed)
+File   141: 00141.TXT - 1,052 bytes (compressed)
+File   142: 00142.TXT - 6,055 bytes (compressed)
+File   143: 00143.TXT - 5,468 bytes (compressed)
+File   144: 00144.TXT - 6,484 bytes (compressed)
+File   145: 00145.TXT - 26,954 bytes (compressed)
+File   146: 00146.TXT - 22,740 bytes (compressed)
+File   147: 00147.TXT - 20,577 bytes (compressed)
+File   148: 00148.TXT - 2,146 bytes (compressed)
+File   149: 00149.TXT - 322 bytes
+File   150: 00150.TXT - 3,164 bytes (compressed)
+File   151: 00151.TXT - 641 bytes
+File   152: 00152.TXT - 7,339 bytes (compressed)
+File   153: 00153.TXT - 177 bytes
+File   154: 00154.TXT - 1,215 bytes (compressed)
+File   155: 00155.TXT - 2,813 bytes (compressed)
+File   156: 00156.TXT - 3,977 bytes (compressed)
+File   157: 00157.TXT - 1,696 bytes (compressed)
+File   158: 00158.TXT - 4,021 bytes (compressed)
+File   159: 00159.TXT - 15,174 bytes (compressed)
+File   160: 00160.TXT - 6,826 bytes (compressed)
+File   161: 00161.TXT - 4,359 bytes (compressed)
+File   162: 00162.TXT - 5,933 bytes (compressed)
+File   163: 00163.TXT - 71 bytes
+File   164: 00164.TXT - 644 bytes (compressed)
+File   165: 00165.TXT - 15,522 bytes (compressed)
+File   166: 00166.TXT - 135 bytes (compressed)
+File   167: 00167.TXT - 2,946 bytes (compressed)
+File   168: 00168.TXT - 17,888 bytes (compressed)
+File   169: 00169.TXT - 609 bytes (compressed)
+File   170: 00170.TXT - 722 bytes (compressed)
+File   171: 00171.TXT - 1,467 bytes (compressed)
+File   172: 00172.TXT - 2,159 bytes (compressed)
+File   173: 00173.TXT - 1,552 bytes (compressed)
+File   174: 00174.TXT - 794 bytes (compressed)
+File   175: 00175.TXT - 1,208 bytes (compressed)
+File   176: 00176.TXT - 365 bytes (compressed)
+File   177: 00177.TXT - 415 bytes (compressed)
+File   178: 00178.TXT - 431 bytes (compressed)
+File   179: 00179.TXT - 471 bytes (compressed)
+File   180: 00180.TXT - 3,953 bytes (compressed)
+File   181: 00181.TXT - 1,579 bytes (compressed)
+File   182: 00182.TXT - 1,614 bytes (compressed)
+File   183: 00183.TXT - 1,449 bytes (compressed)
+File   184: 00184.TXT - 7,609 bytes (compressed)
+File   185: 00185.TXT - 10,504 bytes (compressed)
+File   186: 00186.TXT - 1,792 bytes (compressed)
+File   187: 00187.TXT - 32,128 bytes (compressed)
+File   188: 00188.TXT - 33,280 bytes (compressed)
+File   189: 00189.TXT - 45,952 bytes (compressed)
+File   190: 00190.TXT - 10,880 bytes (compressed)
+File   191: 00191.TXT - 1,188 bytes (compressed)
+File   192: 00192.TXT - 5,623 bytes (compressed)
+File   193: 00193.TXT - 3,686 bytes (compressed)
+File   194: 00194.TXT - 297,326 bytes (compressed)
+File   195: 00195.TXT - 42,124 bytes (compressed)
+File   196: 00196.TXT - 66,339 bytes (compressed)
+File   197: 00197.TXT - 13,682 bytes (compressed)
+File   198: 00198.TXT - 29,969 bytes (compressed)
+File   199: 00199.TXT - 3,686 bytes (compressed)
+File   200: 00200.TXT - 1,156 bytes (compressed)
+File   201: 00201.TXT - 2,485 bytes (compressed)
+Warning: Fragment 314 truncated (expected 30732, got 20492 bytes)
+Warning: Incomplete file at end (no last-fragment flag)
+------------------------------------------------------------
+Extraction complete: 201 files extracted
+Atari ST File Type Detector
+============================================================
+Mode: LIVE MODE (files will be renamed!)
+Folder: /Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/extracted
+============================================================
+
+[LIVE] OK: 00001.TXT - Already .TXT
+[LIVE] RENAME: 00002.TXT → 00002.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00003.TXT → 00003.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00004.TXT → 00004.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00005.TXT → 00005.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00006.TXT → 00006.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00007.TXT → 00007.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00008.TXT → 00008.RSC (RSC, confidence: 100%)
+[LIVE] RENAME: 00009.TXT → 00009.BAT (BAT, confidence: 78%)
+[LIVE] OK: 00010.TXT - Already .TXT
+[LIVE] RENAME: 00011.TXT → 00011-ASCII.H (H, confidence: 78%)
+[LIVE] RENAME: 00012.TXT → 00012-CTYPE.H (H, confidence: 78%)
+[LIVE] RENAME: 00013.TXT → 00013-DEFINE.H (H, confidence: 78%)
+[LIVE] RENAME: 00014.TXT → 00014-GEMBIND.H (H, confidence: 65%)
+[LIVE] RENAME: 00015.TXT → 00015-GEMDEFS.C (C, confidence: 65%)
+[LIVE] OK: 00016.TXT - Already .TXT
+[LIVE] RENAME: 00017.TXT → 00017-MACHINE.H (H, confidence: 81%)
+[LIVE] RENAME: 00018.TXT → 00018-math.H (H, confidence: 60%)
+[LIVE] RENAME: 00019.TXT → 00019-OBDEFS.C (C, confidence: 78%)
+[LIVE] RENAME: 00020.TXT → 00020.H (H, confidence: 83%)
+[LIVE] RENAME: 00021.TXT → 00021-PORTAB.H (H, confidence: 80%)
+[LIVE] RENAME: 00022.TXT → 00022-SETJMP.H (H, confidence: 60%)
+[LIVE] RENAME: 00023.TXT → 00023.H (H, confidence: 85%)
+[LIVE] RENAME: 00024.TXT → 00024-string.H (H, confidence: 78%)
+[LIVE] RENAME: 00025.TXT → 00025-TADDR.H (H, confidence: 78%)
+[LIVE] RENAME: 00026.TXT → 00026-TOSDEFS.H (H, confidence: 78%)
+[LIVE] RENAME: 00027.TXT → 00027-VDIBIND.H (H, confidence: 78%)
+[LIVE] RENAME: 00028.TXT → 00028.H (H, confidence: 78%)
+[LIVE] RENAME: 00029.TXT → 00029.H (H, confidence: 78%)
+[LIVE] RENAME: 00030.TXT → 00030.O (O, confidence: 98%)
+[LIVE] RENAME: 00031.TXT → 00031-header.O (O, confidence: 95%)
+[LIVE] RENAME: 00032.TXT → 00032.O (O, confidence: 98%)
+[LIVE] RENAME: 00033.TXT → 00033.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00034.TXT → 00034.S (S, confidence: 89%)
+[LIVE] SKIP: 00035.TXT - No matching file type detected
+[LIVE] RENAME: 00036.TXT → 00036.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00037.TXT → 00037.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00038.TXT → 00038.PRG (PRG, confidence: 92%)
+[LIVE] OK: 00039.TXT - Already .TXT
+[LIVE] OK: 00040.TXT - Already .TXT
+[LIVE] OK: 00041.TXT - Already .TXT
+[LIVE] OK: 00042.TXT - Already .TXT
+[LIVE] RENAME: 00043.TXT → 00043.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00044.TXT → 00044-channel5.O (O, confidence: 95%)
+[LIVE] RENAME: 00045.TXT → 00045.O (O, confidence: 98%)
+[LIVE] RENAME: 00046.TXT → 00046.O (O, confidence: 98%)
+[LIVE] RENAME: 00047.TXT → 00047.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00048.TXT → 00048-modf.O (O, confidence: 95%)
+[LIVE] RENAME: 00049.TXT → 00049-ceil.O (O, confidence: 95%)
+[LIVE] OK: 00050.TXT - Already .TXT
+[LIVE] RENAME: 00051.TXT → 00051.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00052.TXT → 00052.O (O, confidence: 98%)
+[LIVE] RENAME: 00053.TXT → 00053.PRG (PRG, confidence: 92%)
+[LIVE] OK: 00054.TXT - Already .TXT
+[LIVE] OK: 00055.TXT - Already .TXT
+[LIVE] RENAME: 00056.TXT → 00056-vstpoint.O (O, confidence: 95%)
+[LIVE] OK: 00057.TXT - Already .TXT
+[LIVE] RENAME: 00058.TXT → 00058.BAT (BAT, confidence: 78%)
+[LIVE] OK: 00059.TXT - Already .TXT
+[LIVE] RENAME: 00060.TXT → 00060.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00061.TXT → 00061.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00062.TXT → 00062.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00063.TXT → 00063.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00064.TXT → 00064.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00065.TXT → 00065.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00066.TXT → 00066.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00067.TXT → 00067.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00068.TXT → 00068.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00069.TXT → 00069.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00070.TXT → 00070.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00071.TXT → 00071.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00072.TXT → 00072.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00073.TXT → 00073.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00074.TXT → 00074.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00075.TXT → 00075.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00076.TXT → 00076.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00077.TXT → 00077.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00078.TXT → 00078.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00079.TXT → 00079.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00080.TXT → 00080.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00081.TXT → 00081-access.H (H, confidence: 60%)
+[LIVE] RENAME: 00082.TXT → 00082-aesbind.C (C, confidence: 60%)
+[LIVE] RENAME: 00083.TXT → 00083-assert.C (C, confidence: 65%)
+[LIVE] RENAME: 00084.TXT → 00084-basepage.H (H, confidence: 65%)
+[LIVE] RENAME: 00085.TXT → 00085-bios.C (C, confidence: 65%)
+[LIVE] RENAME: 00086.TXT → 00086-canon.H (H, confidence: 80%)
+[LIVE] RENAME: 00087.TXT → 00087-ctype.H (H, confidence: 83%)
+[LIVE] RENAME: 00088.TXT → 00088-errno.H (H, confidence: 83%)
+[LIVE] RENAME: 00089.TXT → 00089-GEMDEFS.C (C, confidence: 65%)
+[LIVE] RENAME: 00090.TXT → 00090-gemout.C (C, confidence: 60%)
+[LIVE] RENAME: 00091.TXT → 00091-linea.H (H, confidence: 65%)
+[LIVE] RENAME: 00092.TXT → 00092-math.H (H, confidence: 85%)
+[LIVE] RENAME: 00093.TXT → 00093-mtype.H (H, confidence: 81%)
+[LIVE] RENAME: 00094.TXT → 00094-nout.C (C, confidence: 65%)
+[LIVE] RENAME: 00095.TXT → 00095-OBDEFS.C (C, confidence: 78%)
+[LIVE] RENAME: 00096.TXT → 00096.H (H, confidence: 83%)
+[LIVE] RENAME: 00097.TXT → 00097-path.H (H, confidence: 82%)
+[LIVE] OK: 00098.TXT - Already .TXT
+[LIVE] RENAME: 00099.TXT → 00099-signals.H (H, confidence: 81%)
+[LIVE] RENAME: 00100.TXT → 00100-stat.H (H, confidence: 65%)
+[LIVE] RENAME: 00101.TXT → 00101-stdio.H (H, confidence: 88%)
+[LIVE] RENAME: 00102.TXT → 00102-time.H (H, confidence: 85%)
+[LIVE] RENAME: 00103.TXT → 00103-types.H (H, confidence: 60%)
+[LIVE] RENAME: 00104.TXT → 00104-vdibind.H (H, confidence: 60%)
+[LIVE] RENAME: 00105.TXT → 00105-xbios.C (C, confidence: 65%)
+[LIVE] RENAME: 00106.TXT → 00106-PORTAB.H (H, confidence: 80%)
+[LIVE] SKIP: 00107.TXT - No matching file type detected
+[LIVE] SKIP: 00108.TXT - No matching file type detected
+[LIVE] SKIP: 00109.TXT - No matching file type detected
+[LIVE] SKIP: 00110.TXT - No matching file type detected
+[LIVE] SKIP: 00111.TXT - No matching file type detected
+[LIVE] SKIP: 00112.TXT - No matching file type detected
+[LIVE] SKIP: 00113.TXT - No matching file type detected
+[LIVE] SKIP: 00114.TXT - No matching file type detected
+[LIVE] RENAME: 00115.TXT → 00115.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00116.TXT → 00116.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00117.TXT → 00117.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00118.TXT → 00118.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00119.TXT → 00119.S (S, confidence: 89%)
+[LIVE] SKIP: 00120.TXT - No matching file type detected
+[LIVE] RENAME: 00121.TXT → 00121.C (C, confidence: 90%)
+[LIVE] RENAME: 00122.TXT → 00122.MAK (MAK, confidence: 82%)
+[LIVE] RENAME: 00123.TXT → 00123.MAK (MAK, confidence: 78%)
+[LIVE] RENAME: 00124.TXT → 00124.PRG (PRG, confidence: 92%)
+[LIVE] OK: 00125.TXT - Already .TXT
+[LIVE] RENAME: 00126.TXT → 00126.S (S, confidence: 79%)
+[LIVE] OK: 00127.TXT - Already .TXT
+[LIVE] OK: 00128.TXT - Already .TXT
+[LIVE] RENAME: 00129.TXT → 00129.MAK (MAK, confidence: 78%)
+[LIVE] OK: 00130.TXT - Already .TXT
+[LIVE] RENAME: 00131.TXT → 00131.S (S, confidence: 79%)
+[LIVE] OK: 00132.TXT - Already .TXT
+[LIVE] OK: 00133.TXT - Already .TXT
+[LIVE] OK: 00134.TXT - Already .TXT
+[LIVE] OK: 00135.TXT - Already .TXT
+[LIVE] OK: 00136.TXT - Already .TXT
+[LIVE] RENAME: 00137.TXT → 00137.BAT (BAT, confidence: 78%)
+[LIVE] OK: 00138.TXT - Already .TXT
+[LIVE] OK: 00139.TXT - Already .TXT
+[LIVE] RENAME: 00140.TXT → 00140-CONIO.C (C, confidence: 91%)
+[LIVE] RENAME: 00141.TXT → 00141-IO.C (C, confidence: 80%)
+[LIVE] RENAME: 00142.TXT → 00142-MCALC.C (C, confidence: 86%)
+[LIVE] RENAME: 00143.TXT → 00143-MCDISPLY.C (C, confidence: 81%)
+[LIVE] RENAME: 00144.TXT → 00144-MCINPUT.C (C, confidence: 82%)
+[LIVE] RENAME: 00145.TXT → 00145-MCOMMAND.C (C, confidence: 84%)
+[LIVE] RENAME: 00146.TXT → 00146-MCPARSER.C (C, confidence: 84%)
+[LIVE] RENAME: 00147.TXT → 00147-MCUTIL.C (C, confidence: 90%)
+[LIVE] OK: 00148.TXT - Already .TXT
+[LIVE] OK: 00149.TXT - Already .TXT
+[LIVE] RENAME: 00150.TXT → 00150-CONIO.H (H, confidence: 65%)
+[LIVE] RENAME: 00151.TXT → 00151-IO.H (H, confidence: 60%)
+[LIVE] RENAME: 00152.TXT → 00152-MCALC.H (H, confidence: 83%)
+[LIVE] OK: 00153.TXT - Already .TXT
+[LIVE] SKIP: 00154.TXT - No matching file type detected
+[LIVE] OK: 00155.TXT - Already .TXT
+[LIVE] RENAME: 00156.TXT → 00156.C (C, confidence: 82%)
+[LIVE] RENAME: 00157.TXT → 00157.C (C, confidence: 78%)
+[LIVE] RENAME: 00158.TXT → 00158.C (C, confidence: 82%)
+[LIVE] RENAME: 00159.TXT → 00159.C (C, confidence: 84%)
+[LIVE] RENAME: 00160.TXT → 00160.C (C, confidence: 80%)
+[LIVE] RENAME: 00161.TXT → 00161.C (C, confidence: 87%)
+[LIVE] RENAME: 00162.TXT → 00162-SCANCODE.H (H, confidence: 78%)
+[LIVE] OK: 00163.TXT - Already .TXT
+[LIVE] RENAME: 00164.TXT → 00164.RSC (RSC, confidence: 100%)
+[LIVE] RENAME: 00165.TXT → 00165.C (C, confidence: 85%)
+[LIVE] RENAME: 00166.TXT → 00166-HELLO.C (C, confidence: 85%)
+[LIVE] RENAME: 00167.TXT → 00167.S (S, confidence: 94%)
+[LIVE] RENAME: 00168.TXT → 00168-AES.C (C, confidence: 65%)
+[LIVE] RENAME: 00169.TXT → 00169-ASSERT.C (C, confidence: 80%)
+[LIVE] RENAME: 00170.TXT → 00170-CTYPE.H (H, confidence: 78%)
+[LIVE] RENAME: 00171.TXT → 00171-ERRNO.H (H, confidence: 80%)
+[LIVE] RENAME: 00172.TXT → 00172-EXT.H (H, confidence: 65%)
+[LIVE] RENAME: 00173.TXT → 00173-FLOAT.H (H, confidence: 78%)
+[LIVE] RENAME: 00174.TXT → 00174-LIMITS.H (H, confidence: 78%)
+[LIVE] RENAME: 00175.TXT → 00175-MATH.H (H, confidence: 65%)
+[LIVE] RENAME: 00176.TXT → 00176-PROCESS.C (C, confidence: 60%)
+[LIVE] RENAME: 00177.TXT → 00177-SETJMP.H (H, confidence: 60%)
+[LIVE] RENAME: 00178.TXT → 00178-STDARG.H (H, confidence: 60%)
+[LIVE] RENAME: 00179.TXT → 00179-STDDEF.H (H, confidence: 60%)
+[LIVE] RENAME: 00180.TXT → 00180-STDIO.H (H, confidence: 85%)
+[LIVE] RENAME: 00181.TXT → 00181-STDLIB.C (C, confidence: 83%)
+[LIVE] RENAME: 00182.TXT → 00182-STRING.H (H, confidence: 78%)
+[LIVE] RENAME: 00183.TXT → 00183-TIME.C (C, confidence: 65%)
+[LIVE] RENAME: 00184.TXT → 00184-TOS.C (C, confidence: 79%)
+[LIVE] RENAME: 00185.TXT → 00185-VDI.H (H, confidence: 83%)
+[LIVE] RENAME: 00186.TXT → 00186-CHDIR.O (O, confidence: 95%)
+[LIVE] RENAME: 00187.TXT → 00187-PRINTF.O (O, confidence: 95%)
+[LIVE] RENAME: 00188.TXT → 00188-VEX_BUTV.O (O, confidence: 95%)
+[LIVE] RENAME: 00189.TXT → 00189-ABORT.O (O, confidence: 95%)
+[LIVE] RENAME: 00190.TXT → 00190-CCONIN.O (O, confidence: 95%)
+[LIVE] RENAME: 00191.TXT → 00191.O (O, confidence: 98%)
+[LIVE] RENAME: 00192.TXT → 00192-TCSTART.S (S, confidence: 95%)
+[LIVE] OK: 00193.TXT - Already .TXT
+[LIVE] SKIP: 00194.TXT - No matching file type detected
+[LIVE] RENAME: 00195.TXT → 00195.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00196.TXT → 00196.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00197.TXT → 00197.PRG (PRG, confidence: 92%)
+[LIVE] RENAME: 00198.TXT → 00198.C (C, confidence: 90%)
+[LIVE] OK: 00199.TXT - Already .TXT
+[LIVE] SKIP: 00200.TXT - No matching file type detected
+[LIVE] OK: 00201.TXT - Already .TXT
+
+============================================================
+Summary:
+  Total files processed: 201
+  Files renamed: 156
+  Files skipped: 45
+
+  Files by detected extension:
+    .BAT    :   3 files
+    .C      :  34 files
+    .H      :  49 files
+    .MAK    :   3 files
+    .O      :  16 files
+    .PRG    :  43 files
+    .RSC    :   2 files
+    .S      :   6 files
+    .TXT    :  32 files
+============================================================
+No Degas image files (PI1/PI2/PI3) found in '/Volumes/Buffer/retrogames/Archiv/Atari-ST-Harddisk-Backup Kopie/example/extracted'

@@ -1,0 +1,36 @@
+/**
+ *  Copyright 1983, 1985
+ *  Alcyon Corporation
+ *  5010 Shoreham Place
+ *  San Diego, CA 92122-3954
+ *  
+ *  @(#)math.h	3.1	12/30/85
+**/
+
+/* Declarations of Math Routines */
+
+long atol();
+char *ltoa();
+
+double atof();
+char *ftoa();		/* float to %f format */
+char *etoa();		/* float to scientific notation format */
+
+double sin();
+double cos();
+double tan();
+double atan();
+
+double fabs();
+double floor();
+double ceil();
+double fmod();
+double log10();
+double log();
+double pow();
+double sqrt();
+double exp();
+double modf();
+double ldexp();
+double frexp();
+double atan2();

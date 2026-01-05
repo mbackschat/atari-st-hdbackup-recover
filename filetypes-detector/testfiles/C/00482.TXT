@@ -1,0 +1,1845 @@
+/*******************************************************************************
+*****     FCOPY 2.00 ST       -----     von  Martin Backschat              *****
+*****     -------------                      Bergstr.16                    *****
+*****     (fÅr High- und Midres.)            8071 Hepberg                  *****
+*******************************************************************************/
+#include  "osbind.h"
+
+#define G_BOX     20     /* Graphic types of obs  */
+#define G_TEXT    21
+#define G_BOXTEXT 22
+#define G_BUTTON  26
+#define G_BOXCHAR 27
+#define G_STRING  28
+#define G_FTEXT   29
+#define G_FBOXTEXT 30
+                              
+#define NONE       0x0   /* Object flags     */
+#define EDITABLE   0x8
+#define LASTOB    0x20
+                              
+#define NORMAL    0x0    /* Object states */
+#define SELECTED  0x1
+#define CHECKED   0x4
+#define DISABLED  0x8
+#define OUTLINED 0x10
+
+/*****    Definitionen fÅr Resourcefelder    *****/
+#define FORMULAR 0
+#define COPY     4
+#define SCAN     5
+#define FORMAT   6
+#define DIR      7
+#define QUIT     8
+#define PARAMETR 14
+#define DISPLAY  15
+#define DISPLON  17
+#define DISPLOFF 18
+#define FRMAT    19
+#define FRMATON  21
+#define FRMATOFF 22
+#define VERIFY   23
+#define VERIFYON 25
+#define VERIFYOF 26
+#define KIND     27
+#define KINDON   29
+#define KINDOFF  30
+#define SOURCE   31
+#define SRCA     33
+#define SRCB     34
+#define DEST     35
+#define DESTA    37
+#define DESTB    38
+#define INFOS    40
+#define SIDES    41
+#define SIDEONE  42
+#define SIDETWO  43
+#define SECTOR   44
+#define SECMINUS 46
+#define SECTORNR 47
+#define SECPLUS  48
+#define STARTTR  49
+#define STTRMINS 51
+#define STTRNR   52
+#define STTRPLUS 53
+#define ENDTR    54
+#define ENDTRMNS 56
+#define ENDTRNR  57
+#define ENDTRPLS 58
+#define COPYNR   59
+#define NRMINUS  61
+#define NRTEXT   62
+#define NRPLUS   63
+
+/*****    Programmdefinitionen     *****/
+#define   CREATE_PUF 0   /* Definition der Parameter fÅr die Assembler-    */
+#define   FORMAT_TR 1    /* routine     */
+#define   READ_BOOT 2
+#define   WRITE_TR  3
+#define   READ_TR   4
+#define   DISK_INIT 5
+#define   POS_DEST  6
+#define   VERIFY_TR 7
+
+#define   RESTORE        0x00      /* Seekrate von 6 Millisekunden */
+#define   SEEK           0x10      /* Seekrate von 6 Millisekunden */
+#define   bell()         Cconout(7)
+#define   state(x)       *(tree+((x)*12)+5)
+
+#define   MAXSEC    10
+#define   MAXTRACK  85
+
+#define   xnext     6
+#define   ynext2    50
+#define   ynext1    25
+
+#define   xdesk  54
+#define   ydesk2 76
+#define   ydesk1 35
+#define   wdesk  516
+#define   hdesk2 100
+#define   hdesk1 50
+
+#define   x1_dir    10
+#define   x2_dir    45
+#define   xi_dir    14
+#define   xattr_dir 22
+
+/*****    Strings fÅr Resource     *****/
+char *rs_str[] = {
+"Æ The Impressionist . Ø  --  by Martin Backschat (28/5/87)",
+"",
+"",
+"Select option:",
+"Backup",
+"Scan",
+"Format",
+"Directory",
+"Quit",
+"000000000011111111112222222222333333333344444444445555555555",
+"",
+"",
+"66666666667777777777888888   x10",
+"",
+"",
+"01234567890123456789012345678901234567890123456789",
+"",
+"",
+"012345678901234567890123456789012345   x1",
+"",
+"",
+"Graphic Display:",
+"on",
+"off",
+"Format Dest.   :",
+"yes",
+"no",
+"Verify         :",
+"yes",
+"no",
+"Disk-def. Infos:",
+"yes",
+"no",
+"Source Disk    :",
+"A:",
+"B:",
+"Dest. Disk     :",
+"A:",
+"B:",
+"Set disk konfiguration",
+"One Side",
+"Two Sides",
+"Sectors  :",
+"__",
+"__",
+"99",
+"Start at :",
+"__",
+"__",
+"99",
+"End at   :",
+"__",
+"__",
+"99",
+"Multiple Copy:",
+"__",
+"__",
+"99",
+"Side :",
+"Track:",
+"Status "};
+
+typedef struct object
+{
+     int       ob_next;  /* -> object's next sibling   */
+     int       ob_head;  /* -> head of object's children */
+     int       ob_tail;  /* -> tail of object's children */
+     unsigned int ob_type;    /* type of object- BOX, CHAR,... */
+     unsigned int ob_flags;   /* flags */
+     unsigned int ob_state;   /* state- SELECTED, OPEN, ... */
+     char *ob_spec;      /* "out"- -> anything else */
+     int       ob_x;          /* upper left corner of object */
+     int       ob_y;          /* upper left corner of object */
+     int       ob_width; /* width of obj     */
+     int       ob_height;     /* height of obj */
+} OBJECT;
+
+typedef struct text_edinfo
+{
+     char *te_ptext;          /* ptr to text (must be 1st) */
+     char *te_ptmplt;    /* ptr to template */
+     char *te_pvalid;    /* ptr to validation chrs. */
+     int te_font;        /* font */
+     int te_junk1;       /* junk word */
+     int te_just;        /* justification- left, right... */
+     int te_color;       /* color information word */
+     int te_junk2;       /* junk word */
+     int te_thickness;   /* border thickness */
+     int te_txtlen;      /* length of text string */
+     int te_tmplen;      /* length of template string */
+} TEDINFO;
+
+/*****    Resourcedaten fÅr Farbe  *****/
+TEDINFO col_ted[] = {
+rs_str[0], rs_str[1], rs_str[2], 3, 6, 2, 0x2101, 0x0, 2, 65,1,
+rs_str[9], rs_str[10], rs_str[11], 5, 6, 0, 0x1100, 0x0, -1, 61,1,
+rs_str[12], rs_str[13], rs_str[14], 5, 6, 0, 0x1173, 0x0, -1, 33,1,
+rs_str[15], rs_str[16], rs_str[17], 5, 6, 0, 0x1100, 0x0, -1, 51,1,
+rs_str[18], rs_str[19], rs_str[20], 5, 6, 0, 0x1100, 0x0, -1, 42,1,
+rs_str[43], rs_str[44], rs_str[45], 3, 257, 0, 0x1180, 0xAD32, 0, 3,1,
+rs_str[47], rs_str[48], rs_str[49], 3, 0, 0, 0x1180, 0x0, 0, 3,1,
+rs_str[51], rs_str[52], rs_str[53], 3, 0, 0, 0x1180, 0x0, 0, 3,1,
+rs_str[55], rs_str[56], rs_str[57], 3, 0, 0, 0x1180, 0x0, 0, 3,1};
+
+OBJECT col_obj[] = {
+-1, 1, 13, G_BOX, NONE, OUTLINED, 0x21100L, 0,0, 76,1303,
+2, -1, -1, G_BOXTEXT, NONE, 0x11, &col_ted[0], 1281,1024, 840,2,
+13, 3, 12, G_BOX, NONE, NORMAL, 0xFF2173L, 1,1538, 74,1546,
+4, -1, -1, G_STRING, NONE, NORMAL, rs_str[3], 1025,265, 14,1,
+5, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[4], 17,265, 10,1,
+6, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[5], 28,265, 10,1,
+7, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[6], 39,265, 10,1,
+8, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[7], 50,265, 11,1,
+9, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[8], 62,265, 10,1,
+10, -1, -1, G_TEXT, NONE, NORMAL, &col_ted[1], 1795,1286, 45,1,
+11, -1, -1, G_TEXT, NONE, NORMAL, &col_ted[2], 1840,1286, 24,1,
+12, -1, -1, G_TEXT, NONE, NORMAL, &col_ted[3], 1795,1031, 1061,1,
+2, -1, -1, G_TEXT, NONE, NORMAL, &col_ted[4], 809,1031, 1566,1,
+0, 14, 66, G_BOX, NONE, NORMAL, 0xFF1101L, 1,1549, 74,777,
+39, 15, 35, G_BOX, NONE, NORMAL, 0xFF1172L, 1280,512, 800,265,
+19, 16, 18, G_BOX, NONE, NORMAL, 0x1172L, 257,1280, 30,1,
+17, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x15], 0,0, 16,1,
+18, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x16], 18,0, 5,1,
+15, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x17], 24,0, 5,1,
+23, 20, 22, G_BOX, NONE, NORMAL, 0x1172L, 257,1793, 30,1,
+21, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x18], 0,0, 16,1,
+22, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x19], 18,0, 5,1,
+19, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x1A], 24,0, 5,1,
+27, 24, 26, G_BOX, NONE, NORMAL, 0x1172L, 257,259, 30,1,
+25, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x1B], 0,0, 16,1,
+26, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x1C], 18,0, 5,1,
+23, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x1D], 24,0, 5,1,
+31, 28, 30, G_BOX, NONE, NORMAL, 0x1172L, 1,1284, 30,1,
+29, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x1E], 0,0, 16,1,
+30, -1, -1, G_BUTTON, 0x15, NORMAL, rs_str[0x1F], 530,0, 5,1,
+27, -1, -1, G_BUTTON, 0x15, NORMAL, rs_str[0x20], 536,0, 5,1,
+35, 32, 34, G_BOX, NONE, NORMAL, 0x1172L, 257,262, 30,1,
+33, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x21], 0,0, 16,1,
+34, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x22], 18,0, 5,1,
+31, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x23], 24,0, 5,1,
+14, 36, 38, G_BOX, NONE, NORMAL, 0x1172L, 257,775, 30,1,
+37, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x24], 0,0, 16,1,
+38, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x25], 18,0, 5,1,
+35, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x26], 24,0, 5,1,
+59, 40, 54, G_BOX, NONE, NORMAL, 0xFF1172L, 1057,512, 280,265,
+41, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x27], 257,1, 22,1,
+44, 42, 43, G_BOX, NONE, NORMAL, 0x1172L, 513,1026, 22,1,
+43, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x28], 0,0, 10,1,
+41, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x29], 11,0, 10,1,
+49, 45, 48, G_BOX, NONE, NORMAL, 0x1172L, 1536,1284, 23,1,
+46, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x2A], 0,0, 10,1,
+47, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1170L, 12,0, 3,1,
+48, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &col_ted[0x5], 16,0, 2,1,
+44, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 19,0, 3,1,
+54, 50, 53, G_BOX, NONE, NORMAL, 0x1172L, 1536,262, 23,1,
+51, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x2E], 0,0, 10,1,
+52, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1100L, 12,0, 3,1,
+53, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &col_ted[0x6], 16,0, 2,1,
+49, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 19,0, 3,1,
+39, 55, 58, G_BOX, NONE, NORMAL, 0x1172L, 1536,1031, 23,1,
+56, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x32], 0,0, 10,1,
+57, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1100L, 12,0, 3,1,
+58, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &col_ted[0x7], 16,0, 2,1,
+54, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 19,0, 3,1,
+64, 60, 63, G_BOX, NONE, NORMAL, 0xFF1172L, 314,512, 271,1028,
+61, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x36], 1792,1, 14,1,
+62, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1100L, 770,1282, 3,1,
+63, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &col_ted[0x8], 1542,1282, 2,1,
+59, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 266,1282, 3,1,
+65, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x3A], 314,5, 6,1,
+66, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x3B], 314,6, 6,1,
+13, -1, -1, G_STRING, LASTOB, NORMAL, rs_str[0x3C], 58,7, 8,1};
+
+/*****    Resourcedaten fÅr S/W    *****/
+TEDINFO sw_ted[] = {
+rs_str[0], rs_str[1], rs_str[2], 3, 6, 2, 0x1100, 0x0, 2, 64,1,
+rs_str[9], rs_str[10], rs_str[11], 5, 6, 0, 0x1180, 0x0, -1, 61,1,
+rs_str[12], rs_str[13], rs_str[14], 5, 6, 0, 0x1180, 0x0, -1, 33,1,
+rs_str[15], rs_str[16], rs_str[17], 5, 6, 0, 0x1180, 0x0, -1, 51,1,
+rs_str[18], rs_str[19], rs_str[20], 5, 6, 0, 0x1180, 0x0, -1, 42,1,
+rs_str[43], rs_str[44], rs_str[45], 3, 257, 0, 0x1180, 0xAD32, 0, 3,1,
+rs_str[47], rs_str[48], rs_str[49], 3, 0, 0, 0x1180, 0x0, 0, 3,1,
+rs_str[51], rs_str[52], rs_str[53], 3, 0, 0, 0x1180, 0x0, 0, 3,1,
+rs_str[55], rs_str[56], rs_str[57], 3, 0, 0, 0x1180, 0x0, 0, 3,1};
+
+OBJECT sw_obj[] = {
+-1, 1, 13, G_BOX, NONE, OUTLINED, 0x21100L, 0,0, 76,1303,
+2, -1, -1, G_BOXTEXT, NONE, 0x11, &sw_ted[0x0], 1281,2304, 1864,2049,
+13, 3, 12, G_BOX, NONE, NORMAL, 0xFF1101L, 1,1538, 74,1546,
+4, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x3], 1,9, 14,1,
+5, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[0x4], 17,9, 10,1,
+6, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[0x5], 28,9, 10,1,
+7, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[0x6], 39,9, 10,1,
+8, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[0x7], 50,9, 11,1,
+9, -1, -1, G_BUTTON, 0x5, NORMAL, rs_str[0x8], 62,9, 10,1,
+10, -1, -1, G_TEXT, NONE, NORMAL, &sw_ted[0x1], 1795,7, 45,1,
+11, -1, -1, G_TEXT, NONE, NORMAL, &sw_ted[0x2], 1840,7, 24,1,
+12, -1, -1, G_TEXT, NONE, NORMAL, &sw_ted[0x3], 1795,2055, 1061,1,
+2, -1, -1, G_TEXT, NONE, NORMAL, &sw_ted[0x4], 809,2055, 1566,1,
+0, 14, 66, G_BOX, NONE, NORMAL, 0xFF1101L, 1,269, 74,3081,
+39, 15, 35, G_BOX, NONE, NORMAL, 0xFF1101L, 1280,1280, 288,3592,
+19, 16, 18, G_BOX, NONE, NORMAL, 0x1101L, 257,1280, 30,1,
+17, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x15], 0,0, 16,1,
+18, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x16], 18,0, 5,1,
+15, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x17], 24,0, 5,1,
+23, 20, 22, G_BOX, NONE, NORMAL, 0x1101L, 257,2817, 30,1,
+21, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x18], 0,0, 16,1,
+22, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x19], 18,0, 5,1,
+19, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x1A], 24,0, 5,1,
+27, 24, 26, G_BOX, NONE, NORMAL, 0x1101L, 257,259, 30,1,
+25, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x1B], 0,0, 16,1,
+26, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x1C], 18,0, 5,1,
+23, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x1D], 24,0, 5,1,
+31, 28, 30, G_BOX, NONE, NORMAL, 0x1101L, 1,2052, 30,1,
+29, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x1E], 0,0, 16,1,
+30, -1, -1, G_BUTTON, 0x15, NORMAL, rs_str[0x1F], 530,0, 5,1,
+27, -1, -1, G_BUTTON, 0x15, NORMAL, rs_str[0x20], 536,0, 5,1,
+35, 32, 34, G_BOX, NONE, NORMAL, 0x1101L, 257,1286, 30,1,
+33, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x21], 0,0, 16,1,
+34, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x22], 18,0, 5,1,
+31, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x23], 24,0, 5,1,
+14, 36, 38, G_BOX, NONE, NORMAL, 0x1101L, 257,2567, 30,1,
+37, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x24], 0,0, 16,1,
+38, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x25], 18,0, 5,1,
+35, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x26], 24,0, 5,1,
+59, 40, 54, G_BOX, NONE, NORMAL, 0xFF1101L, 1057,1280, 24,3592,
+41, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x27], 257,2048, 22,1,
+44, 42, 43, G_BOX, NONE, NORMAL, 0x1101L, 513,1026, 22,1,
+43, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x28], 0,0, 10,1,
+41, -1, -1, G_BUTTON, 0x11, NORMAL, rs_str[0x29], 11,0, 10,1,
+49, 45, 48, G_BOX, NONE, NORMAL, 0x1101L, 1,2052, 23,1,
+46, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x2A], 0,0, 10,1,
+47, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1170L, 12,0, 3,1,
+48, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &sw_ted[0x5], 16,0, 2,1,
+44, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 19,0, 3,1,
+54, 50, 53, G_BOX, NONE, NORMAL, 0x1101L, 1,1030, 23,1,
+51, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x2E], 0,0, 10,1,
+52, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1100L, 12,0, 3,1,
+53, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &sw_ted[0x6], 16,0, 2,1,
+49, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 19,0, 3,1,
+39, 55, 58, G_BOX, NONE, NORMAL, 0x1101L, 1,2567, 23,1,
+56, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x32], 0,0, 10,1,
+57, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1100L, 12,0, 3,1,
+58, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &sw_ted[0x7], 16,0, 2,1,
+54, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 19,0, 3,1,
+64, 60, 63, G_BOX, NONE, NORMAL, 0xFF1101L, 314,1280, 271,3075,
+61, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x36], 1792,2048, 14,1,
+62, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2DFF1100L, 770,1282, 3,1,
+63, -1, -1, G_FTEXT, EDITABLE, OUTLINED, &sw_ted[0x8], 1542,1282, 2,1,
+59, -1, -1, G_BOXCHAR, 0x5, NORMAL, 0x2BFF1100L, 266,1282, 3,1,
+65, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x3A], 1083,3332, 6,1,
+66, -1, -1, G_STRING, NONE, NORMAL, rs_str[0x3B], 1083,3845, 6,1,
+13, -1, -1, G_STRING, LASTOB, NORMAL, rs_str[0x3C], 1082,775, 8,1};
+
+/*****    Texte und Meldungen      *****/
+char select[]   = " Please select option! ";
+char adjust[]   = "        Ready.         ";
+char scanning[] = "      Scanning...      ";
+char reading[]  = "      Reading...       ";
+char writing[]  = "      Writing...       ";
+char form_txt[] = "     Formatting...     ";
+char wr_form[]  = "Formatting & Writing...";
+char empty[] = {0};
+
+char ins_form[] = "[0][A: Unformatted Disk][OK|CANCEL]";
+char ins_src[] = "[0][A: Source Disk][OK|CANCEL]";
+char ins_des[] = "[0][A: Destination Disk][OK|CANCEL]";
+char ins_all[] = "[0][A: Source Disk|B: Destination Disk][OK|CANCEL]";
+char write_err[]="[1][B: Write-Error on|Destination Disk!][RETRY|CONT|CANCEL]";
+char ver_err[] ="[1][B: Verify-Error on|Destination Disk!][RETRY|CONT|CANCEL]";
+char read_err[] ="[1][A: Read-Error on|Source Disk!][RETRY|CONT|CANCEL]";
+char col_err[] = "[1][Only working with|Mid- and Hires!][ QUIT ]";
+char *puffer;  /* Pufferadresse */
+char *v_puffer;     /* Verifypuffer     */
+char *f_puffer;     /* Formatierpuffer  */
+char *f_pufend;     /* Ende des "  */
+
+char *err_codes[19] = {"OK","Don't know","DRV not ready","Unknown error",
+                       "CRC error","Bad request","Seek error","Unknown media",
+                       "Sector error","No paper","Write error",
+                       "Read error","Don't know","WRITE PRTCED","Changed disk",
+                       "Unknown device","Bad Sectors","Insert Disk!",
+                       "VERIFY ERROR" };
+
+int  contrl[12],intin[128],ptsin[128],intout[128],ptsout[128];
+int  work_out[57],work_in[12];
+int  *Line2_A; /* Integerzeiger auf Line_A-Variablenfeld    */
+int  *tree;  /* Zeigt auf Beginn der Resourcedaten   */
+int  white[] = {0}; /* leeres FÅllmuster     */
+int  black[] = {0xffff};
+int  cross[2];
+int  error[2] = {0xaaaa,0xffff};   /* Muster fÅr fehlerhaften Track   */
+
+int  rez; /* Grafikauflîsung  */
+int  handle;   /* Grafikhandle unter VDI     */
+int  ynext,ydesk,hdesk;  /* GrafikabhÑngige Variablen im Directory-Befehl  */
+int  old_tr;   /* WÑhrend <Copy> akt. Track des anderen Laufwerks     */
+int  err; /* EnthÑlt Fehlerkode    */
+int  checksum;
+int  verify = 0;    /* Verifyflag (0 : aus/ 1 : an)    */
+int  format = 1;    /* Formatierflag (0 : aus/ 1 : an) */
+int  boot = 1;      /* Boottrack-abhÑngig lesen aus/an */
+int  display = 1;   /* Grafikdisplay aus/an  */
+int  sides = 1;     /* Zwei Seiten */
+int  sectors = 9;   /* 9 Sektoren  */
+int  start = 0;     /* Starttrack 0     */
+int  end = 79;      /* Endtrack 79 */
+int  copies = 1;    /* 1 Kopie der Diskette  */
+int  trlen,track,seite,se1;   /* Arbeitsvariablen */
+int  anz_sec;       /* Anzahl Sektoren zu kopieren/scannen...    */
+int  flag;
+
+long source = 1;    /* Sourcedrive A    */
+long dest  = 1;     /* Destination A    */
+long aktdrv;        /* Aktuelle Drive   */
+long start_dma,end_dma;  /* Start und Ende des DMA-benutzten Bereiches     */
+long sbase;    /* Basisadresse des Bildschirms    */
+long ssp;
+long plen;     /* Pufferadresse    */
+long count2;
+
+struct a_i {   /* Struktur des Line_A-Variablenbereiches    */
+     int  v_planes;
+     int  v_lin_wr;
+     int  *CONTRL;
+     int  *INTIN;
+     int  *PTSIN;
+     int  *INTOUT;
+     int  *PTSOUT;
+     int schrott[11];
+     long *patptr;
+} *Line_A;
+
+
+/*********************************************************
+***  Hier beginnt das eigentliche Programm/Hauptteil   ***
+**********************************************************/
+main()
+{
+  register int i;
+
+     appl_init();   /* AES initialisieren    */
+     a_init();      /* Line_A-Routinen initialisieren  */
+
+     rez = Getrez();     /* Grafikauflîsung holen */
+     if (!rez) {    /* Lowres 320x200 -> falsche Auflîsung/Fehler     */
+          form_alert(1,col_err);
+          return;   /* Programm gleich wieder verlassen     */
+     }
+     if (rez == 1)  /* Ansonsten die richtige Resourcedaten ansprechen     */
+          tree = (int *) col_obj;
+     else
+          tree = (int *) sw_obj;
+
+     for (i = 0; i < 67; i++) /* Resourcekoordinaten wandeln     */
+          rsrc_obfix(tree,i);
+
+     if (rez == 2) {     /* FarbabhÑngige Variablen definieren   */
+          ynext = ynext2;
+          ydesk = ydesk2;
+          hdesk = hdesk2;
+     }
+     else {
+          ynext = ynext1;
+          ydesk = ydesk1;
+          hdesk = hdesk1;
+     }
+
+     for (i = 0; i < 10; work_in[i++] = 1);  /* VDI initialisieren    */
+     work_in[10] = 2;
+     v_opnvwk(work_in, &handle, work_out);
+
+     graf_mouse(0,0l);   /* Pfeil als Maus   */
+     sbase = Logbase();  /* Bildschirmbasis  */
+     reserve();          /* Reserviert freien Speicher */
+
+     if (xbios(8,f_puffer,0l,0,0x42,79,0,1))
+eloop:    goto eloop;
+
+     form_manager();     /* Verwaltet das Eingabeformular   */
+}
+
+
+/*****     Schliesst alle KanÑle und beendet Programm     *****/
+quit()
+{
+     v_clsvwk(handle);   /* VDI schliessen   */
+     appl_exit();        /* AES schliessen   */
+     Pterm0();
+}
+
+
+/*****     Verwaltet das Eingabeformular     *****/
+form_manager()
+{
+  int x,y,w,h,nr,a;
+
+     form_center (tree, &x,&y,&w,&h);   /* Formular zentrieren   */
+     form_dial (0, x,y,w,h, x,y,w,h);
+     form_dial (1, 10,10,20,20, x,y,w,h);
+     objc_draw (tree,0,4, x,y,w,h);     /* Formular anzeigen     */
+     build_display();    /* Baut Display im Formular auf    */
+     print_var();        /* Gibt Einstellungen aus     */
+     objc_change(tree,INFOS,0,0,0,640,400,DISABLED,1);
+     objc_change(tree,FORMAT,0,0,0,640,400,DISABLED,1);
+
+ while (1) {   /* Endlos-Eingabeschleife     */
+     info_msg(select);   /* Gibt Eingabebereitschaft aus    */
+     nr = form_do(tree,SECTORNR);    /* AES-Formularverwaltung     */
+
+        if (nr == KINDON) {   /* Bootsektordaten als Diskkonfiguration     */
+             objc_change(tree,INFOS,0,0,0,640,400,DISABLED,1);
+             objc_change(tree,FORMAT,0,0,0,640,400,DISABLED,1);
+             continue;
+        }
+        if (nr == KINDOFF) {  /* Festgelegte Daten als Diskkonf. */
+             objc_change(tree,INFOS,0,0,0,640,400,NORMAL,1);
+             objc_change(tree,FORMAT,0,0,0,640,400,NORMAL,1);
+             continue;
+        }
+
+     objc_change(tree,nr,0,0,0,640,400,0,1);
+
+     sectors = get_numeric(SECTORNR);
+     if (sectors > MAXSEC)
+          sectors = 9;
+     start = get_numeric(STTRNR);
+     end = get_numeric(ENDTRNR);
+     copies = get_numeric(NRTEXT);
+     if (!copies)
+          copies = 1;
+
+     renew(SECTORNR,sectors);
+     renew(STTRNR,start);
+     renew(ENDTRNR,end);
+     renew(NRTEXT,copies);
+
+     switch (nr) {  /* Mîgliche Befehle abfragen  */
+          case QUIT:     /* Programm verlassen    */
+               quit();
+          case COPY:     /* Diskcopy    */
+               s_copy(0);
+               goto update;
+          case SCAN:     /* Disk scannen     */
+               s_copy(1);
+               goto update;
+          case FORMAT:   /* Diskette formatieren  */
+               s_copy(2);
+               goto update;
+          case DIR: /* Inhaltsverzeichnis    */
+               read_var();
+               dir();
+update:        build_display();
+               continue;
+
+          /****************************/
+          /* KonfigurationsÑnderungen */
+          /****************************/
+          case SECMINUS: /* SectorzÑhler -1  */
+               if (sectors >= 2)
+                    renew(SECTORNR,--sectors);
+               continue;
+          case SECPLUS:  /* SectorzÑhler +1  */
+               if (sectors < MAXSEC)
+                    renew(SECTORNR,++sectors);
+               continue;
+          case STTRMINS: /* Starttrack -1    */
+               if (start)
+                    renew(STTRNR,--start);
+               continue;
+          case STTRPLUS: /* Starttrack +1    */
+               if (start < end)
+                    renew(STTRNR,++start);
+               continue;
+          case ENDTRMNS: /* Endtrack -1 */
+               if (end > start)
+                    renew(ENDTRNR,--end);
+               continue;
+          case ENDTRPLS: /* Endtrack +1 */
+               if (end < MAXTRACK)
+                    renew(ENDTRNR,++end);
+               continue;
+          case NRMINUS:  /* KopienanzahlzÑhler -1 */
+               if (copies >= 2)
+                    renew(NRTEXT,--copies);
+               continue;
+          case NRPLUS:   /* KopienanzahlzÑhler +1 */
+               if (copies < 99)
+                    renew(NRTEXT,++copies);
+               continue;
+     }
+
+ }
+
+     form_dial (2, 10,10,20,20, x,y,w,h);
+     form_dial (3, x,y,w,h, x,y,w,h);
+}
+
+
+/*****     Diskoperationsverwaltung (Copy,Scan,Formatting)     *****/
+s_copy(fl)
+  int fl;
+{
+  register int start2,s2,wechsel,i;
+  int s1,start1,end1;
+  int r_w,count,j,k,l;
+  long test;
+
+     flag = fl;
+     read_var();    /* Einstellungen holen   */
+     hide_mouse();  /* Maus abschalten  */
+
+     if (flag == 2) {    /* Formatieren */
+          if (info_ins(form_txt,ins_form,dest))   /* >Diskette einlegen!<  */
+               goto s_c_end;  /* Bei gewÅnschtem Abbruch beenden */
+     }
+     else {    /* Ansonsten (Copy,Scan) Sourcediskette erwÅnschen!    */
+          if (!flag && source != dest) {     /* Bei Copy und unterschied-  */
+               put_string(reading,28,14);    /* licher LW Source- und Ziel- */
+               *(ins_all+4) = source+0x40;   /* Drive angeben    */
+               *(ins_all+19) = dest+0x40;
+               bell;
+               if(form(ins_all) == 2)
+                    goto s_c_end;
+          }
+          else /* Ansonsten nur Sourcedisk angeben     */
+               if(info_ins(reading, ins_src,source))
+                     goto s_c_end;
+     }
+
+     assembler(DISK_INIT);    /* Laufwerk initialisieren    */
+
+     if (boot) {    /* Sollen Bootsektordaten als Konf. benutzt werden?    */
+          assembler(READ_BOOT);    /* Bootsektor lesen */
+          start1 = 0;    /* Startsektor 0    */
+          i = *(puffer+19);
+          if (i < 0)
+              i += 256;
+          i += (*(puffer+20))*256; /* Anzahl Sektoren auf Diskette    */
+          s1 = *(puffer+26);  /* Anzahl Seiten    */
+          se1 = *(puffer+24); /* Anzahl Sektoren pro Track  */
+          end1 = (i/se1)/s1-1;     /* Anzahl Tracks    */
+          s1--;
+     }
+     else {    /* Ansonsten Einstellungen als Konf. benutzen     */
+          s1 = sides;
+          start1 = start;
+          end1 = end;
+          se1 = sectors;
+     }
+
+
+     /*****     Scannen und Formatieren     *****/
+     if (flag) {
+          if (flag == 2) {    /* Volles Muster fÅrs Formatieren  */
+               cross[0] = 0xffff;
+               cross[1] = 0xffff;
+          }
+          else {    /* Beim Scannen graues Muster */
+               cross[0] = 0x5555;
+               cross[1] = 0xaaaa;
+          }
+
+          if (flag == 2) {
+               info_msg(form_txt); /* Formatiermeldung ausgeben  */
+               assembler(CREATE_PUF);   /* Formatierpuffer vorbereiten     */
+          }
+          else
+               info_msg(scanning); /* Scanningmeldung  ausgeben  */
+
+          trlen = 0;
+          /* Von Start- bis Endtrack durchgehen und formatieren/scannen    */
+          for (track = start1; track <= end1; track++) {
+               for (seite = 0; seite <= s1; seite++) {
+                    if (flag == 2) {
+retry1:                  assembler(FORMAT_TR);
+                         if (verify) {  /* Verifizieren falls angegeben    */
+                              assembler(VERIFY_TR);
+                              if (err) {     /* Auf Fehler testen     */
+                                   dsk_info(seite,track);   /* Diskstatus  */
+                                   k = flop_err(ver_err);
+                                   if (k == 3)    /* Abbruch?    */
+                                        goto s2_c_end;
+                                   else if (k == 1)    /* Retry? */
+                                        goto retry1;
+                              }
+                         }
+                    }
+
+                    else {
+retry3:                  assembler(READ_TR);
+                         if (err) {     /* Fehler aufgetaucht?   */
+                              dsk_info(seite,track);   /* Diskstatus  */
+                              bell;
+                              *(read_err+4) = source+0x40;
+                              k = flop_err(read_err);  /* Fehler melden    */
+                              if (k == 3)    /* Abbruch?    */
+                                   goto s2_c_end;
+                              else if (k == 1)
+                                   goto retry3;   /* Retry? */
+                         }
+                    }
+                    dsk_info(seite,track);   /* Diskstatus ausgeben   */
+               }
+
+               if (Cconis()) {     /* Auf gedrÅckte Tasten testen     */
+                    i = Crawcin() & 0xff;    /* Taste holen */
+                    if (i == 0x20) /* SPACE = Warten   */
+                         wait();
+                    else if (i == 0x1b) /* ESC = Abbruch    */
+                         break;
+               }
+
+          }
+
+          assembler(DISK_INIT);    /* Auf Track 0 positionieren  */
+          if (flag == 2) {    /* Nach Formatieren noch Track 0 beschreiben */
+               for (i = 0; i < 512; *(f_puffer + i++) = 0);
+               Protobt(f_puffer,0x01111111l,2+s1,0);
+               r_w = (end1+1)*se1*(s1+1);
+               *(f_puffer+0x13) = r_w & 0xff;
+               *(f_puffer+0x14) = (r_w >> 8) & 0xff;
+               *(f_puffer+0x18) = se1;
+               Flopwr(f_puffer,0x0000l,(int) dest-1,1,0,0,1);
+
+               for (i = 0; i < 512; *(f_puffer+ i++) = 0);
+               *(f_puffer) = 0xf7;
+               *(f_puffer+1) = 0xff;
+               *(f_puffer+2) = 0xff;
+               Flopwr(f_puffer,0x0000l,(int) dest-1,7,0,0,1);
+               Flopwr(f_puffer,0x0000l,(int) dest-1,2,0,0,1);
+          }
+
+          goto s_c_end;
+     }
+
+
+     /*****     Copy     *****/
+     assembler(CREATE_PUF);   /* Formatierpuffer aufbauen   */
+     /* Anzahl der Diskwechsels berechnen    */
+     wechsel = (0x200l*(s1+1l)*(long) se1*((long) end1-start1+1))/plen;
+     trlen = se1*512;    /* Anzahl Bytes pro zu lesenden Track   */
+     r_w = plen/trlen-1; /* Anzahl Tracks pro Wechsel  */
+
+     start2 = start1;
+     s2 = 0;   /* Beginnen mit Seite 0  */
+     seite = 0;
+     track = start1;
+     old_tr = track;
+
+     for (count = 0; count <= wechsel; count++) {
+
+          /* Lesen  */
+          info_msg(reading);
+          if (count && source == dest)
+               if (info_ins(reading, ins_src,source))
+                    goto s2_c_end;
+
+          cross[0] = 0x5555;  /* Lesemuster  */
+          cross[1] = 0xaaaa;
+
+          for (count2 = 0; count2 < r_w; count2++) {
+retry2:        assembler(READ_TR);
+               dsk_info(seite,track);   /* Diskstatus ausgeben   */
+               if (err) {     /* Disk hat Lesefehler   */
+                    bell;
+                    *(read_err+4) = source+0x40;
+                    k = form(read_err);
+                    if (k == 3)    /* Abbruch?    */
+                         goto s2_c_end;
+                    else if (k == 1)    /* Retry? */
+                         goto retry2;
+               }
+               if (++seite > s1) { /* Auf nÑchsten Track positionieren     */
+                    seite = 0;
+                    if (++track > end1)
+                         break;    /* Endtrack Åberschritten!    */
+               }
+
+               if (Cconis()) {     /* Taste gedrÅckt?  */
+                    i = Crawcin() & 0xff;
+                    if (i == 0x20) /* Space = Warten   */
+                         wait();
+                    else if (i == 0x1b) /* ESC = Abbruch    */
+                         goto s2_c_end;
+               }
+          }
+
+          /* schreiben   */
+          assembler(POS_DEST);     /* Auf zu schreibenden Track fahren     */
+          info_msg(format ? wr_form : writing);
+          for (l = 1; l <= copies; l++) {    /* Anzahl der Kopien     */
+               renew(NRTEXT,(int) l);
+               if (source == dest || l > 1)  /* Zieldiskette verlangen     */
+                    if (info_ins(empty, ins_des,dest))
+                         goto s2_c_end;
+               if (l > 1) {   /* Bei 2. Kopie Display aufbauen   */
+                    build_display();
+                    hide_mouse();
+               }
+               seite = s2;    /* Alte Seite und Track holen */
+               track = start2;
+
+               cross[0] = 0xffff;  /* Schreibemuster   */
+               cross[1] = 0xffff;
+
+               for (count2 = 0; count2 < r_w; count2++) {
+retry:              if (format)
+                         assembler(FORMAT_TR);
+                    assembler(WRITE_TR);
+                    dsk_info(seite,track);   /* Diskstatus ausgeben   */
+                    if (err) {     /* Disk hat Schreibfehler!    */
+                         k = flop_err(write_err);
+                         if (k == 3)    /* Abbruch?    */
+                              goto s2_c_end;
+                         else if (k == 1)    /* Retry? */
+                              goto retry;
+                    }
+                    if (verify) {
+                         assembler(VERIFY_TR);
+                         if (err) {
+                              dsk_info(seite,track);
+                              k = flop_err(ver_err);
+                              if (k == 3)    /* Abbruch?    */
+                                   goto s2_c_end;
+                              else if (k == 1)    /* Retry? */
+                                   goto retry;
+                         }
+                    }
+                    if (++seite > s1) { /* Auf nÑchsten Track gehen   */
+                         seite = 0;
+                         if (++track > end1) /* Zieltrack erreicht?   */
+                              break;
+                    }
+                    if (Cconis()) {     /* Taste gedrÅckt?  */
+                         i = Crawcin() & 0xff;
+                         if (i == 0x20) /* Space = Warten   */
+                              wait();
+                         else if (i == 0x1b) /* ESC = Abbruch    */
+                              goto s2_c_end;
+                    }
+               }
+          }
+          s2 = seite;    /* Neue Leseseite und Lesetrack holen   */
+          start2 = track;
+          if (track > end1)   /* Zieltrack erreicht?   */
+               break;
+     }
+
+s2_c_end:
+     assembler(DISK_INIT);    /* Track 0 anfahren */
+s_c_end:
+     dsk_info(0,0);
+     info_msg(adjust);
+     renew(NRTEXT,copies);
+     show_mouse();
+}
+
+
+/*****     Gibt Fehlertext mit fehlerhaften Drive aus     *****/
+flop_err(txt)
+  register char *txt;
+{
+     bell;
+     *(txt+4) = dest+0x40;
+     return(form(txt));  /* Text ausgeben und Reaktion Åbergeben */
+}
+
+
+/*****     Gibt Text in oberster Zeile und Meldung aus     *****/
+info_ins(txt1,txt2,drv)
+  register long drv;
+  register char *txt1,*txt2;
+{
+     put_string(txt1,28,14);
+     *(txt2+4) = drv+0x40;
+     bell;
+     return (form(txt2)-1);
+}
+
+
+/*****     Gibt eine Meldung aus     *****/
+form(txt)
+  register char *txt;
+{
+  register int i;
+
+     show_mouse();
+     i = form_alert(1,txt);
+     hide_mouse();
+     return i;
+}
+
+
+/*****     Gibt Text in oberster Zeile aus     *****/
+info_msg(txt1)
+  register char *txt1;
+{
+     put_string(txt1,28,14);
+}
+
+
+/*****     Pausiert     *****/
+wait()
+{
+     form("[0][Work paused!][CONT]");
+}
+
+
+/*****     Reserviert Speicher fÅr die Puffer     *****/
+reserve()
+{
+     f_puffer = (char *) Malloc(0x2000l);    /* 8 KB fÅr Formatpuffer */
+     f_pufend = f_puffer+0x1ff0l;  /* Ende des Formatpuffers */
+     v_puffer = (char *) Malloc(0x2000l);    /* 8 KB fÅr Verify-Puffer*/
+
+     plen = Malloc(-1l); /* Freie Bytes ermitteln */
+
+     if (plen < 0x10000l) {    /* Nicht genÅgend freie Bytes?     */
+          form_alert(1,"[1][I need at minimum|$10000 Bytes for me!][ QUIT ]");
+          quit();
+     }
+     puffer = (char *) Malloc(plen);
+}
+
+
+/*****     Gibt Einstellungen aus     *****/
+print_var()
+{
+     renew(SECTORNR,sectors);
+     renew(STTRNR,start);
+     renew(ENDTRNR,end);
+     renew(NRTEXT,copies);
+     set(DISPLON,display);
+     set(FRMATON,format);
+     set(VERIFYON,verify);
+     set(KINDON,boot);
+     set(SRCA,(int) !(source-1));
+     set(DESTA,(int) !(dest-1));
+     set(SIDEONE,!sides);
+}
+
+
+/*****     öbernimmt Einstellungen     *****/
+read_var()
+{
+     source = 2;
+     if (state(SRCA) == SELECTED)  /* Sourcedrive holen     */
+          source = 1;
+
+     dest = 2;
+     if (state(DESTA) == SELECTED) /* Zieldrive holen  */
+          dest = 1;
+
+     sides = 1;
+     if (state(SIDEONE) == SELECTED)    /* Anzahl Seiten holen   */
+          sides = 0;
+
+     display = 0;
+     if (state(DISPLON) == SELECTED)    /* Grafikdisplay an/aus  */
+          display = 1;
+
+     format = 0;
+     if (state(FRMATON) == SELECTED)    /* Zieldisk formatieren an/aus     */
+          format = 1;
+
+     verify = 0;
+     if (state(VERIFYON) == SELECTED)   /* Verify an/aus    */
+          verify = 1;
+
+     boot = 0;
+     if (state(KINDON) == SELECTED)     /* Bootsektordaten ja/nein    */
+          boot = 1;
+}
+
+
+/*****     Gibt selektiertes Objekt invers aus     *****/
+set(index,nr)
+  register int index,nr;
+{
+     state(index) = state(index+1) = NORMAL;
+     objc_change(tree,index+(!nr),0,0,0,640,400,SELECTED,1);
+}
+
+
+/*****     Gibt neuen Wert im Objekt aus     *****/
+renew(index,nr)
+  register int index,nr;
+{
+  char *ptr;
+
+     get_ptext(index,&ptr);   /* holt Textadresse */
+     ssp = 0;
+     dez_str(ptr,(long) nr,2);     /* Zahl in String ausgeben    */
+     objc_draw(tree,index,0,0,0,640,400);
+}
+
+
+/*****     Holt Te_ptext-Adresse eines Objektes     *****/
+get_ptext(index,ptr)
+  register int index;
+  long *ptr;
+{
+  register long *ptr2;
+  register OBJECT *obj;
+
+     obj = (OBJECT *) tree;
+     ptr2 = (long *) (obj+index)->ob_spec;
+     *ptr = *ptr2;
+}
+
+
+/****     Wandelt String in Zahl um     ****/
+get_numeric(nr)
+  int nr;
+{
+  char *ptr;
+
+     get_ptext(nr,&ptr);      /* holt Textadresse */
+     nr = 0;
+     if (*ptr)
+          if (*(ptr+1))
+               nr = ((int) *(ptr+1)-0x30)+((int) (*ptr-0x30)*10);
+          else
+               nr = (int) *ptr-0x30;
+     return nr;
+}
+
+
+/*****     Schreibt in einen String eine formatierte Dezimalzahl     *****/
+dez_str(string,zahl,laenge)
+  register char *string;
+  register int laenge;
+  register long zahl;
+{
+     if (!laenge)
+          return;
+     dez_str(string,(long) (zahl/10), --laenge);
+     while (zahl >= 10)  zahl -= 10;
+     *(string+ssp) = (0x30 + (char) zahl);
+     ssp++;
+}
+
+
+/*****     Gibt Lese- bzw. Schreibeinformationen aus     *****/
+dsk_info(s,tr)
+  register int s,tr;
+{
+  static int last_err = -1;
+  static char s_str[] = "_";
+  static char tr_str[] = "__";
+
+     if (display)
+        if (!err)
+          fill_rectangle(xdesk+xnext*tr+2,ydesk+s*ynext+2,xdesk+
+                         xnext*tr+xnext-2,ydesk+s*ynext+ynext-2,0,&cross,1);
+        else
+          fill_rectangle(xdesk+xnext*tr+2,ydesk+s*ynext+2,xdesk+
+                         xnext*tr+xnext-2,ydesk+s*ynext+ynext-2,0,&error,1);
+
+     if (s)    /* Seitennummer ausgeben */
+          *s_str = 0x32;
+     else
+          *s_str = 0x31;
+     ssp = 0;
+     dez_str(tr_str,(long) tr,2);  /* Track ausgeben   */
+
+
+     if (rez == 2) {     /* Bei Textausgabe auf Grafikauflîsung achten     */
+          put_string(s_str,69,323);
+          put_string(tr_str,69,341);
+     }
+     else {
+          put_string(s_str,69,334);
+          put_string(tr_str,69,351);
+     }
+
+     if (last_err != err) {   /* Gleicher Fehler wie letztes Mal?     */
+          if (rez == 2)
+               fill_rectangle(492,364,606,384,0,&white,0);
+          else
+               fill_rectangle(492,184,606,194,0,&white,0);
+          put_string(&err_codes[err+2*(-err)][0],62,379+(rez-1 ? 0:8));
+     }
+     last_err = err;
+}
+
+
+/*****     Baut Display auf     *****/
+build_display()
+{
+  register int i;
+
+     hide_mouse();
+     clr_display(); /* Formular lîschen */
+
+     hline(xdesk,ydesk,xdesk+wdesk,&black,0);
+     hline(xdesk,ydesk+hdesk,xdesk+wdesk,&black,0);
+     hline(xdesk,ydesk+hdesk/2,xdesk+wdesk,&black,0);
+     line(xdesk,ydesk,xdesk,ydesk+hdesk,-1);
+     line(xdesk+wdesk,ydesk,xdesk+wdesk,ydesk+hdesk,-1);
+     for (i = 1; i < 87; i++)
+          line(xdesk+xnext*i,ydesk,xdesk+xnext*i,ydesk+hdesk,-1);
+
+     show_mouse();
+}
+
+
+/*****     Lîscht Display     *****/
+clr_display()
+{
+     fill_rectangle(xdesk,ydesk,xdesk+wdesk,ydesk+hdesk,0,white,0);
+}
+
+
+/*****     Gibt Inhaltsverzeichnis aus     *****/
+dir()
+{
+  static char path[] = "A:\\\\*.*";
+  static char info1[] = "free Bytes: _______";
+  static char info2[] = "used Bytes: _______";
+  static char info3[] = "______";
+
+  register int xa,ys,i;
+  register long j;
+
+  struct DTA {
+    char  system[21];
+    char  attr;
+    long  date;
+    unsigned int   h_length;
+    unsigned int   l_length;
+    char  name[14];
+  }   dta;
+
+  struct FREE {
+     long free_units;
+     long total_units;
+     long bps;
+     long spu;
+  } free;
+
+
+     hide_mouse();       /* Maus abschalten */
+     ys = rez-1 ? ydesk2+14 : (ydesk1+6)*2;
+     Dsetdrv((int) source-1); /* Aktuelles Laufwerk    */
+     Fsetdta(&dta);  /* DTA setzen  */
+     clr_txt();     /* Display lîschen und Mittelstrich ziehen   */
+
+     if (Dfree(&free,0) < 0) { /* Freien Speicher auf Disk holen  */
+          form_alert(1,"[1][Can't get DIR!|Check your disk again!][CANCEL]");
+          goto exit_2;   /* Fehler > Abbruch */
+     }
+
+     ssp = 12;
+     j = free.free_units * free.bps * free.spu;
+     dez_str(info1,j,7);
+     ssp = 12;
+     dez_str(info2,(free.total_units * free.bps * free.spu)-j,7);
+
+     put_string(info1,x1_dir,ys);  /* freie Bytes ausgeben  */
+     put_string(info2,x1_dir,ys+17);    /* used Bytes ausgeben   */
+
+     *path = source+0x40;
+     Dsetpath(path);     /* Path = Oberstes Verzeichnis */
+
+     if (Fsfirst("*.*",0x37) < 0)  /* Keine Datei vorhanden?     */
+          goto exit_1;
+
+     xa = x1_dir;
+     ys += 51;
+     do { /* Ausgabeschleife  */
+          put_string(dta.name,xa,ys);   /* Dateiname ausgeben    */
+          ssp = 0;
+          j = ((long) dta.h_length)*65536 + dta.l_length;
+          dez_str(info3,j,6);
+          put_string(info3,xa+xi_dir,ys);    /* LÑnge ausgeben   */
+
+          switch (dta.attr) { /* Dateiattribute   */
+               case 0x01:     /* Nur lesen   */
+                    put_string("NO_WRT",xa+xattr_dir,ys);
+                    break;
+               case 0x02:     /* Verborgen */
+                    put_string("HIDDEN",xa+xattr_dir,ys);
+                    break;
+               case 0x04:     /* Verborgener Sys-Eintrag */
+                    put_string("SYSTEM",xa+xattr_dir,ys);
+                    break;
+               case 0x10:     /* Subdir */
+                    put_string("SUB",xa+xattr_dir,ys);
+                    break;
+               default:
+                    put_string("R/W",xa+xattr_dir,ys);
+          }
+
+          ys += 17;
+          if (ys >= ydesk2+hdesk2) {   /* Spalte mit EintrÑgen voll? */
+               ys = rez-1 ? ydesk2+14 : (ydesk1+6)*2;
+               if (xa == x2_dir) { /* Seite mit EintrÑgen voll?  */
+                    if (0x1b == (Crawcin() & 0xff))    /* Auf Taste warten */
+                         goto exit_2;   /* ESC = Abbruch    */
+                    clr_txt();
+                    xa = x1_dir;
+               }
+               else
+                    xa = x2_dir;
+
+           }
+     } while (!Fsnext());
+
+exit_1:
+     Crawcin();
+exit_2:
+     show_mouse();  /* Maus wieder einschalten */
+}
+
+
+/*****     Display lîschen und Mittellinie ziehen     *****/
+clr_txt()
+{
+     clr_display();
+     line(320,ydesk+2,320,ydesk+hdesk-2,0xfefe);  /* Trennlinie */
+}
+
+/********************
+** Line_A-Routinen **
+********************/
+/*****     Farbe und Koordinaten in Line_A-Variablenbereich kopieren     *****/
+a_xycol(x1,y1,x2,y2,col1,col2,col3,col4)
+  int x1,y1,x2,y2,col1,col2,col3,col4;
+{
+     Line2_A[19] = x1;
+     Line2_A[20] = y1;
+     Line2_A[21] = x2;
+     Line2_A[22] = y2;
+     Line2_A[12] = col1;
+     Line2_A[13] = col2;
+     Line2_A[14] = col3;
+     Line2_A[15] = col4;
+}
+
+
+/*****     FÅllvariablen setzen     *****/
+a_fill(wr_mode,patptr,patmask)
+  register int wr_mode,patmask,*patptr;
+{
+     Line2_A[18] = wr_mode;
+     Line_A->patptr = (long *) patptr;
+     Line2_A[25] = patmask;
+}
+
+
+a_2arg(x1,y1,x2,y2,col1,col2,col3,col4,wr_mode,patptr,patmask)
+  int x1,y1,x2,y2,col1,col2,col3,col4,wr_mode,patmask,*patptr;
+{
+     a_xycol(x1,y1,x2,y2,col1,col2,col3,col4);
+     a_fill(wr_mode,patptr,patmask);
+}
+
+
+/*****     Initialisiert Line_A-Routinen     *****/
+a_init()
+{
+  register long A_Base;
+
+     asm {
+          dc.w      0xa000
+          move.l    A0,A_Base
+     }
+     Line_A = (struct a_i *) A_Base;
+     Line2_A = (int *) Line_A;
+     Line2_A[27] = 0;
+}
+
+
+/*****     Linie ziehen     *****/
+line(x1,y1,x2,y2,mask)
+  int x1,y1,x2,y2,mask;
+{
+     a_xycol(x1,y1,x2,y2,1,0,0,0);
+     Line2_A[16] = -1;
+     Line2_A[17] = mask;
+     Line2_A[18] = 0;
+     asm { dc.w 0xa003 };     /* Linie ziehen */
+}
+
+
+/*****     Horizontale Linie ziehen     *****/
+hline(x1,y1,x2,patptr,patmask)
+  int x1,y1,x2,patmask,*patptr;
+{
+     a_xycol(x1,y1,x2,0,1,0,0,0);
+     a_fill(0,patptr,patmask);
+     asm { dc.w 0xa004 };
+}
+
+
+/*****     Rechteck ausfÅllen     *****/
+fill_rectangle(x1,y1,x2,y2,wr_mode,patptr,patmask)
+  int x1,y1,x2,y2,wr_mode,patmask,*patptr;
+{
+     a_2arg(x1,y1,x2,y2,1,0,0,0,wr_mode,patptr,patmask);
+     asm { dc.w 0xa005 };
+}
+
+
+show_mouse()
+{
+  register int *ptr;
+
+     ptr = Line_A->CONTRL;
+     *(ptr+1) = 0;
+     *(ptr+3) = 1;
+     ptr = Line_A->INTIN;
+     *ptr = 0;
+
+     asm { dc.w 0xa009 };
+}
+
+
+hide_mouse()
+{
+     asm { dc.w 0xa00a };
+}
+
+
+/*****     Gibt Textstring aus     *****/
+put_string(str,x,y)
+  register char *str;
+  register int x,y;
+{
+     if (rez == 1)  /* Farbe  */
+          v_gtext(handle,x*8,y/2,str);
+     else /* S/W    */
+          v_gtext(handle,x*8,y,str);
+}
+
+
+/*****     Assemblerroutinen fÅr Diskoperationen     *****/
+assembler(fl)
+  int fl;
+{
+ asm {
+     movem.l   D0-D7/A0-A6,-(A7)
+     move.w    fl(A6),D0
+     lsl.w     #2,D0
+     lea       jumpadr,A0     ; Adresse aus Tabelle holen
+     jmp       0(A0,D0.w)
+
+jumpadr:
+     bra  build_form     ; fl = 0
+     bra  form_track     ; 1
+     bra  read_boot      ; 2
+     bra  write_track    ; 3
+     bra  read_track     ; 4
+     bra  d_init         ; 5
+     bra  to_dest        ; 6
+     bra  verify_track   ; 7
+
+
+verify_track:       ; flag = 2 -> Formatierverify in Puffer f_puffer
+                    ; ansonsten in berechneten Kopierpuffer
+
+     cmpi.w    #2,flag(A4)    ; 2-> puffer = f_puffer
+     bne       normpuf
+
+     move.w    #0,checksum(A4)
+     bra       ver1
+
+normpuf:
+     bsr       start_adr           ; Errechnet Startadresse des Tracks
+     bsr       calc_checksum       ; Errechnet Checksumme
+
+ver1:
+     move.l    v_puffer(A4),A0     ; Errechnet Startadresse
+     moveq     #1,D6               ; Start ab Sektor 1
+     move.w    se1(A4),D7          ; D7 enthÑlt Anzahl der Sektoren
+     move.l    dest(A4),aktdrv(A4)
+     bsr       calc_set            ; Setzt wichtige Parameter
+     bsr       read                ; Liest Sektoren ein
+     tst.w     err(A4)
+     bne       err_ver             ; Schon beim Lesen Fehler...
+
+     move.b    checksum(A4),D2
+     move.l    v_puffer(A4),A0
+     bsr       calc_checksum       ; Checksumme berechnen
+
+     cmp.b     checksum(A4),D2     ; Checksummen vergleichen
+     beq       ok_ver              ; Verify stimmte-> err = 0
+
+err_ver:
+     move.w    #-18,err(A4)        ; Verifyfehler
+     bra       back
+ok_ver:
+     clr.w     err(A4)
+     bra       back
+
+
+build_form:    ; Baut leeren Track auf (nur Headerdaten!)
+     move.l    f_puffer(A4),A2     ; Adresse des Puffers in A2
+     moveq    #1,D3                ; Start mit Sektor 1
+
+     moveq     #59,D1              ; 60 mal
+     moveq     #0x4e,D0            ; Den Wert 0x4e als Trackvorspann
+     bsr       wmult               ; Und in den Puffer schreiben
+
+     moveq     #11,D1              ; 12 mal
+     clr.b     D0                  ; 0
+     bsr       wmult               ; In den Puffer
+     moveq     #2,D1               ; 3 mal
+     moveq     #0xf5,D0            ; Den Wert 0xf5
+     bsr       wmult               ; in den Puffer
+     move.b    #0xfe,(A2)+         ; 0xFE - Adressmarke
+     clr.b     (A2)+               ; Track (wird erst spÑter geschrieben)
+     clr.b     (A2)+               ; Seite ( " )
+     move.b    #11,(A2)+           ; Sektor
+     move.b    #2,(A2)+            ; Sektorgrîûe ist 2 (512 Bytes)
+     move.b    #0xf7,(A2)+         ; Checksumme schreiben
+     moveq     #21,D1              ; 22 mal
+     moveq     #0x4e,D0            ; den Wert 0x4e
+     bsr       wmult               ; in den Puffer schreiben
+
+bt2:
+     moveq     #11,D1              ; 12 mal
+     clr.b     D0                  ; 0
+     bsr       wmult               ; In den Puffer
+     moveq     #2,D1               ; 3 mal
+     moveq     #0xf5,D0            ; Den Wert 0xf5
+     bsr       wmult               ; in den Puffer
+
+     move.b    #0xfe,(A2)+         ; 0xFE - Adressmarke
+     clr.b     (A2)+               ; Track (wird erst spÑter geschrieben)
+     clr.b     (A2)+               ; Seite ( " )
+     move.b    D3,(A2)+            ; Sektor
+     move.b    #2,(A2)+            ; Sektorgrîûe ist 2 (512 Bytes)
+     move.b    #0xf7,(A2)+         ; Checksumme schreiben
+
+     moveq     #21,D1              ; 22 mal
+     moveq     #0x4e,D0            ; den Wert 0x4e
+     bsr       wmult               ; in den Puffer schreiben
+     moveq     #11,D1              ; 12 mal
+     clr.b     D0                  ; den Wert 0
+     bsr       wmult               ; in den Puffer
+     moveq     #2,D1               ; 3 mal
+     moveq     #0xf5,D0            ; den Wert 0xf5
+     bsr       wmult               ; in den Puffer
+
+     move.b    #0xfb,(A2)+         ; 0xFB - Datenblockmarke
+     move.l    #512,D1             ; Bytes pro Sektor
+     lsr.l     #1,D1               ; durch 2
+     subq.l    #1,D1
+bt1: clr.b     (A2)+               ; Daten vollschreiben
+     clr.b     (A2)+
+     dbf       D1,bt1
+
+     move.b    #0xf7,(A2)+         ; Checksumme schreiben
+     moveq     #39,D1              ; 40 mal
+     moveq     #0x4e,D0            ; den Wert 0x4e
+     bsr       wmult               ; in den Puffer schreiben
+
+     addq.l    #1,D3               ; Sektorcounter plus 1
+     cmp.w     se1(A4),D3          ; Max. Sektor schon
+     ble       bt2                 ; Åberzogen?
+
+
+     moveq     #0x4e,D0            ; Rest des Puffers mit $4e
+next2:
+     move.b    D0,(A2)+
+     cmpa.l    f_pufend(A4),A2     ; schon bis zum Pufferende?
+     bne       next2
+
+     bra       exit
+
+wmult:    ; D1+1 mal D0.b in (A2) schreiben
+     move.b    D0,(A2)+            ; Daten in Puffer schreiben
+     dbf       D1,wmult            ; nÑchstes Bytes
+     rts
+
+
+form_track:    ; Track formatieren
+     bsr       f_tr
+     bra       back
+
+f_tr:
+     move.l    f_puffer(A4),A2     ; Startadr. des Formatierpuffers
+     adda.l    #76,A2              ; Trackvorspann Åberspringen
+     move.b    track+1(A4),(A2)+   ; Aktueller Track
+     move.b    seite+1(A4),(A2)+   ; Aktuelle Seite
+     adda.l    #25,A2
+
+     moveq     #1,D3               ; SektorzÑhler
+wt3: adda.l    #16,A2              ; 12x0, 3xf5, FE Åberspringen
+     move.b    track+1(A4),(A2)+   ; Aktueller Track
+     move.b    seite+1(A4),(A2)+   ; Aktuelle Seite
+     adda.l    #594,A2             ; DatenlÑnge
+
+     addq.l    #1,D3
+     cmp.w     se1(A4),D3
+     ble       wt3                 ; Bis zum letzten Sektor
+
+     move.l    f_puffer(A4),A0     ; Pufferstartadr.
+     moveq     #1,D7
+     moveq     #1,D6               ; Irgendwelche Werte
+     move.l    dest(A4),aktdrv(A4) ; Aktuelle Drive ist Ziellaufwerk
+     bsr       calc_set            ; Setzt wichtige Parameter
+
+     bsr       clr_dma
+     move.w    #31 ,0xffff8604     ; SektorzÑhler auf 31?
+     move.w    #0x180,(A6)         ; 0x180 - FDC 1772 selektieren
+     move.w    #0xf0,0xffff8604    ; 0xf0  Format-Track-Befehl
+
+     move.l    #0x50000,D7         ; 0x50000 - TimoOut
+
+wt2: btst      #5,0xfffffa01       ; Ist Floppy fertig?
+     beq       ready               ; Ja!
+     subq.l    #1,D7               ; TO dekrementieren
+     bne       wt2                 ; Noch nicht abgelaufen?
+     bra       time_out
+
+
+d_init:   ; Initialisiert FDC und fÑhrt auf Track 0
+     bsr       to_spvi        ; In den Supervisormodus
+     move.l    source(A4),D0  ; Sourcedrive
+     move.l    D0,D7
+     bsr       to_0           ; Auf Track 0
+     cmp.l     dest(A4),D7    ; Gibt es Zweitlaufwerk?
+     beq       no2nd
+     move.l    dest(A4),D0    ; Ja, dann auch dieses auf Track 0 fahren
+     bsr       to_0
+
+no2nd:
+     clr.w     old_tr(A4)     ; Source-Track ist 0
+     clr.w     0x43e          ; VBL freigeben
+     clr.w     err(A4)        ; kein Fehler melden
+     bra       back
+
+
+read_boot:     ; Bootsektor in Kopierpuffer lesen
+     move.l    puffer(A4),A0       ; Rechnet Startadresse in A0 aus
+     moveq     #1,D6               ; Start ab Sektor 1
+     moveq     #1,D7               ; D7 enthÑlt Anzahl der Sektoren
+     clr.w     seite(A4)           ; Seite = 0
+     clr.w     track(A4)           ; Track = 0 = Bootsektor
+     move.l    source(A4),aktdrv(A4)
+     bsr       calc_set            ; Setzt wichtige Parameter
+     bsr       read                ; Liest Sektoren ein
+     bra       back
+
+
+write_track:   ; Track schreiben
+     bsr       start_adr           ; Rechnet Startadresse in A0 aus
+     moveq     #1,D6               ; Start ab Sektor 1
+     move.w    se1(A4),D7          ; D7 enthÑlt Anzahl der Sektoren
+     move.l    dest(A4),aktdrv(A4);
+     bsr       calc_set            ; Setzt wichtige Parameter
+     bsr       write               ; Schreibt Sektoren auf Disk
+     bra       back
+
+
+read_track:    ; Track lesen
+     bsr       start_adr           ; Rechnet Startadresse in A0 aus
+     moveq     #1,D6               ; Start ab Sektor 1
+     move.w    se1(A4),D7          ; D7 enthÑlt Anzahl der Sektoren
+     move.l    source(A4),aktdrv(A4)
+     bsr       calc_set            ; Setzt wichtige Parameter
+     bsr       read                ; Liest Sektoren ein
+
+back:     ; Assemblerunterroutine verlassen und wieder ins C
+     move.l    A7,D7
+     move.l    ssp(A4),-(A7)
+     move.w    #32,-(A7)
+     trap      #1                  ; Wieder in den User-Modus wechseln
+     move.l    D7,A7
+     bra       exit
+
+
+to_dest:  ; Bei verschiedenen Laufwerken, jetzigen Track/Seite merken
+          ; und alten Track/Seite im neuen Laufwerk anfahren
+
+     move.l    source(A4),D0
+     cmp.l     dest(A4),D0         ; Source = Ziellaufwerk, dann abbrechen
+     beq       exit
+
+     bsr       to_spvi
+     move.w    #0x82,(A6)          ; Trackregister wieder berichtigen
+     move.w    old_tr(A4),0xffff8604
+     move.w    track(A4),old_tr(A4); Jetziger Track wird aktueller Track
+
+     tst.w     seite(A4)           ; Seite 0 schon gelesen, dann Track Ok
+     bne       keeptrack
+
+     subi.w    #1,old_tr(A4)
+keeptrack:
+     clr.w     0x43e               ; VBL ein
+     bra       back
+
+
+;
+;    Hilfsroutinen
+;
+to_spvi:  ; Wechselt in den Supervisormodus
+     move.l    A7,D7
+     clr.l     -(A7)
+     move.w    #0x20,-(A7)
+     trap      #1
+     move.l    D0,ssp(A4)
+     move.l    D7,A7
+
+     lea       0xffff8606,A6   ; Floppyregister-Adresse
+     move.w    #1,0x43e        ; VBL-Routine sperren
+     rts
+
+
+start_adr:     ; Adresse der aktuellen Tracks berechnen -> A0
+     move.l    puffer(A4),A0       ; Pufferadresse
+     move.l    count2(A4),D0       ; aktueller Track
+     muls.w    trlen(A4),D0        ; mal der TracklÑnge
+     adda.l    D0,A0
+     rts
+
+
+flopcmds:      ; Floppykommando D6.w senden
+     move.l    #0x50000,D5         ; TimeOut- ZÑhler
+     move.w    #0x80,(A6)          ; 1772-Register selektieren
+     move.w    0xffff8604,D0
+     btst      #7,D0               ; Motor on?
+     bne       fc_1                ; Ja!
+     move.l    #0x50000,D5         ; Sonst lÑngeres Timeout
+fc_1:move.w    D6,0xffff8604       ; Schreibt in akt. Floppyregister
+
+fc_2:subq.l    #1,D5               ; To-ZÑhler dekrementieren
+     beq       reset               ; Abgelaufen?
+     btst      #5,0xfffffa01       ; MFP GPIP, 1772 fertig?
+     bne       fc_2
+     clr.w     err(A4)             ; Bis jetzt kein Fehler
+     rts
+
+reset:
+     move.w    #0x80,(A6)          ; Befehlsregister selektieren
+     move.w    #0xd0,0xffff8604    ; Schreibt in akt. Floppyregister RESET
+     rts
+
+
+set_sound:     ; setzt Bits D2 im Soundchip
+     move.w    SR,-(A7)            ; Status retten
+     ori.w     #0x700,SR           ; IPL 7
+     move.b    #0xe,0xffff8800     ; GiSelect
+     move.b    0xffff8800,D1       ; Port A lesen
+     move.b    D1,D2               ; und nach D2 bringen
+     and.b     #0xf8,D1            ; Bits 0-2 lîschen
+     or.b      D0,D1               ; Neue Bits dafÅr setzen
+     move.b    D1,0xffff8802       ; und in den Port A schreiben
+     move.w    (A7)+,SR            ; Status zurÅckholen
+     rts
+
+
+; benîtigt: D6 = Startsektor, D7 = Anzahl der Sektoren
+;           A0 = Startadresse
+calc_set:      ; Setzt wichtige Parameter und Register
+     move.l    A0,start_dma(A4)    ; Startadresse des DMA retten
+     move.w    D7,anz_sec(A4)      ; Anzahl Sektoren merken
+
+     bsr       to_spvi             ; in den Supervisor-Modus wechseln
+
+     move.w    #-11,err(A4)        ; Standardfehlernummer ist Read Error
+     move.l    #0,A5               ; A5 lîschen
+
+     move.l    start_dma(A4),A0    ; Startadresse des DMA wieder ins Register
+     move.w    anz_sec(A4),D7      ; Anzahl Sektoren wiederholen
+     mulu      #512,D7             ; Anzahl der Sektoren mal 512
+     adda.l     D7,A0              ; LÑnge der Sek. plus Startadresse
+     move.l    A0,end_dma(A4)      ; und Ende der DMA merken
+
+     move.l    aktdrv(A4),D0
+     lsl.l     #1,D0               ; aktuelle Drive
+     or.w      seite(A4),D0        ; mit aktueller Seite verknÅpfen
+     eori.b    #7,D0               ; Bits fÅr Hardware verknÅpfen
+     and.b     #7,D0
+     bsr       set_sound           ; Bits im Sound-Chip setzen
+
+     move.w    #0x84,(A6)          ; Sektorregister selektieren
+     move.w    D6,0xffff8604       ; Startsektor
+
+     move.b    start_dma+3(A4),0xffff860d    ; dmalow
+     move.b    start_dma+2(A4),0xffff860b    ; dmamid
+     move.b    start_dma+1(A4),0xffff8609    ; dmahigh
+
+
+nocopy:   ; Setzt Kopf auf neuen Track
+     move.w    #0x86,(A6)          ; Datenregister
+     move.w    track(A4),0xffff8604     ; GewÅnschter Track
+
+     moveq     #SEEK,D6       ; Seek-Befehl
+     tst.w     verify(A4)     ; Verify ein oder aus?
+     beq       nover1         ; Aus...
+     ori.w     #4,D6          ; Verify einschalten
+nover1:
+     bra       flopcmds       ; Befehl ausfÅhren lassen
+
+
+read:     ; liest Sektoren bis end_dma-Adresse
+     move.w    #-1,err(A4)    ; Currerr als Default-Error
+     move.w    #0x90,(A6)     ; DMA-Status lîschen
+     move.w    #0x190,(A6)
+     move.w    #0x90,(A6)     ; Datenrichtung auf READ
+     move.w    anz_sec(A4),0xffff8604   ; SektorenzÑhler
+     move.w    #0x80,(A6)               ; Read-Sector-Befehl
+     move.w    #0x90,0xffff8604         ; Schreibt in akt. Floppyregister
+rw:
+     move.l    #0x50000,D7    ; Timeout-ZÑhler
+     move.l    end_dma(A4),A2 ; Zieladresse fÅr DMA
+
+wait2:
+     btst      #5,0xfffffa01  ; MFP GPIP, 1772 fertig?
+     beq       ready          ; Ja,...
+     subq.l    #1,D7          ; Sonst Time-Out-ZÑhler vermindern
+     beq       time_out       ; Zeit abgelaufen?
+
+     move.b    0xffff8609,start_dma+1(A4)    ; dmahigh
+     move.b    0xffff860b,start_dma+2(A4)    ; dmamid
+     move.b    0xffff860d,start_dma+3(A4)    ; dmalow
+     cmpa.l    start_dma(A4),A2    ; Ziel-DMA schon erreicht?
+     bgt       wait2          ; Nein, dann weitermachen
+     clr.w     err(A4)        ; Kein Fehler...
+     bra       read_2
+
+time_out:
+     move.w    #-2,err(A4)    ; Timeout-Fehler
+read_2:
+     bsr       reset
+ready:
+     move.w    #0x90,(A6)     ; DMA-Statusregister selektieren
+     move.w    (A6),D0        ; Status lesen
+     btst      #0,D0          ; DMA-Error?
+     beq       flopfail
+
+     move.w    #0x80,(A6)     ; 1772-Statusregister selek.
+     move.w    0xffff8604,D0
+     and.b     #0x5c,D0       ; RNF, Checksum und Lost-Data isolieren
+     beq       flopok         ; Kein Fehler
+
+     bsr       err_bits       ; Fehlernummer bestimmen
+     bra       flopfail
+
+flopok:
+     clr.w     err(A4)        ; keinen Fehler
+flopfail:
+     clr.w     0x43e
+     rts
+
+
+err_bits:      ; Holt Floppystatus in Fehlervariable err
+     moveq     #-13,D1        ; Write protect?
+     btst      #6,D0
+     bne       e1             ; Ja
+     moveq     #-8,D1         ; Record not found
+     btst      #4,D0
+     bne       e1             ; Ja
+     moveq     #-4,D1         ; CRC Error?
+     btst      #3,D0
+     beq       e1             ; Ja
+     move.w    err(A4),D1     ; Alten Error nehmen
+e1:  move.w    D1,err(A4)     ; Neuer Error
+     rts
+
+
+write:         ; Schreibt Track
+     clr.l     D6
+wloop:
+     addq.w    #1,D6
+     cmp.w     se1(A4),D6
+     bgt       ready               ; Schon alle Sektoren geschrieben...
+
+     move.w    #0x84,(A6)          ; Sektorregister
+     move.w    D6,0xffff8604       ; Aktueller Sektor
+
+     bsr       clr_dma             ; lîscht DMA-Status
+     move.w    #1,0xffff8604       ; Sektorcount auf einen Sektor setzen
+     move.w    #0x180,(A6)         ; 1772 selektieren
+     move.w    #0xa0,0xffff8604    ; Write-Sector-Befehl
+
+     move.l    #0x50000,D7         ; Timeout-ZÑhler
+wait3:
+     btst      #5,0xfffffa01       ; MFP GPIP, 1772 fertig?
+     beq       wloop               ; Ja,...
+     subq.l    #1,D7               ; Sonst Time-Out-ZÑhler vermindern
+     bne       wait3
+     bsr       reset               ; Zeit abgelaufen?
+     bra       wloop
+
+
+clr_dma:       ; Lîscht DMA-Status
+     move.w    #0x190,(A6)    ; DMA-Status lîschen
+     move.w    #0x90,(A6)
+     move.w    #0x190,(A6)    ; Datenrichtung auf READ
+     rts
+
+
+to_0:          ; FÑhrt auf Track 0
+     bsr       set_drv        ; Aktuelles LW setzen
+     moveq     #RESTORE,D6    ; 0x02 - Restore ohne Verify
+     tst.w     verify(A4)     ; Verify ein oder aus?
+     beq       nover2         ; Aus...
+     ori.w     #4,D6          ; Verify einschalten
+nover2:
+     bra       flopcmds
+
+
+;    D0 = source/dest
+set_drv:       ; Setzt aktuelles Laufwerk
+     lsl.l     #1,D0
+     or.w      #0,D0          ; Mit aktueller Seite verknÅpfen
+     eori.b    #7,D0          ; Bits fÅr Hardware verknÅpfen
+     and.b     #7,D0
+     bra       set_sound      ; Bits im Sound-Chip setzen
+
+
+;    A0: Startadresse des Tracks
+calc_checksum:      ; Errchnet Checksumme eines Tracks
+     move.w    se1(A4),D0     ; ZÑhler fÅr Checksummenberechnung
+     mulu      #512,D0
+     subq.w    #1,D0
+     clr.l     D1
+countloop1:
+     add.b     (A0)+,D1
+     dbf       D0,countloop1
+
+     move.b    D1,checksum(A4)     ; err enthÑlt die Checksum!
+     bra       start_adr
+
+
+exit:     ; VerlÑsst Assemblerroutine
+     movem.l (A7)+,D0-D7/A0-A6
+     }
+}
+

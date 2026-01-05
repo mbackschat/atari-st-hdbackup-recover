@@ -1,0 +1,10 @@
+move.w	#1,-(sp)
+clr.w	-(sp)
+clr.w	-(sp)
+move.w	#1,-(sp)
+clr.w	-(sp)
+clr.l	-(sp)
+pea	$60000
+move.w	#8,-(sp)
+trap	#$e
+

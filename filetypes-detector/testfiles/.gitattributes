@@ -1,0 +1,4 @@
+*.TXT binary
+*.S binary
+*.C binary
+.H binary

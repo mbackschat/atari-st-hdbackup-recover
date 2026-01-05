@@ -1,0 +1,3189 @@
+!St/*******************************************************************************
+********************************************************************************
+***                                                                          ***
+***                          MODERN SAMPLING v1.1                            ***
+***                          --------------------                            ***
+***                                                                          ***
+***       Program developped by         MABA                                 ***
+***       ==================================                                 ***
+***       Graphic, music & demos by     MABA                                 ***
+***       Original idea by              H. Stult & MABA                      ***
+***       Hardware developped by        68000er Magazine & H. Stult          ***
+***                                                                          ***
+********************************************************************************
+*******************************************************************************/
+
+
+/*******************************************************************************
+***  Includes, extern definitions and macro definitions                      ***
+*******************************************************************************/
+#include  "osbind.h"               /* defines gemdos, bios and xbios names */
+#include  "msampler.h"
+
+#define   state(x)       *(tree+((x)*12)+5)
+
+#define   NORMAL    0
+#define   SELECT    1
+
+#define   SONGMAX   300
+#define   WINDMAX   300
+
+#define   WORK1     0x426          /* adress of work mem #1 */
+
+/*******************************************************************************
+***  global label defintions                                                 ***
+*******************************************************************************/
+char save1,save2;
+char key_state;          /* includes the original key state */
+char speed = 1;          /* speed of playing */
+char blk_speed;
+char wind_speed[WINDMAX];     /* speed of each window  */
+char on_mouse[] = {0x08};
+char off_mouse[] = {0x12};
+char gong[] = {7,0};
+char wndnr[] = "___";
+char whole[] = "wnd";
+char info_pos[] = "________";
+char info_kb[] = "____";
+char info1[] = "free Bytes: _______";
+char info2[] = "used Bytes: _______";
+char info3[] = "______";
+char info_fmt[] = "Formatting Track __ on side 0/1";
+char too_big[]="[1][Seq. length is too big!|Only ____ KB available!][CANCEL]";
+char seq_name[14] = "SOUND.SEQ";
+char seq_path[40] = "A:\\*.*";
+char song_name[14] = "SOUND.SNG";
+char song_path[40] = "A:\\*.*";
+char file_name[14];
+char path_name[40];
+char fmtpuffer[9*1024];
+
+int  kind_blk = -1;      /* 0 = Window def. / 1 = Block def.     */
+int  schrift = 2;        /* Schriftgrîsse (1 = 8*8, 2 = 16*8)    */
+int  akt_wind = 0;       /* activated window is default 0 (max. 299!) */
+int  displ_nr = 16;      /* number of digit. sound bytes to be displ. */
+int  drive;              /* the current drive     */
+int  ret;                /* work label  */
+int  mouse_x,mouse_y;    /* mouse coordinates after pressing the button    */
+int  *tree;              /* contains the start adr. of resource datas */
+int  *Line2_A; /* Integerzeiger auf Line_A-Variablenfeld    */
+int  cross[] = {0x1111,0x0000,0x4444,0x0000};
+int  muster[] = {0x5555,0xaaaa};
+int  white[] = {0x0000};
+int  black[] = {0xffff};
+int  initsnd[] = {0,255,1,255,2,255,3,255,4,255,5,255,6,0,7,0x3f,
+                           8,0,9,0,10,0,-1,0};
+int  def_kind;           /* kind of def. (0 = start, 1 : end)    */
+
+long *other_pos;         /* either start pos or end pos (<--> def_pos)     */
+long *def_pos;           /* pointer to the defining pos (blk,wnd)     */
+long info_field[2] = {0,0};
+long ssp;                /* work label  */
+long *screen;            /* start adress of screen memory   */
+long *pic_adr;           /* adress of the picture */
+long free_bytes;         /* number of unused bytes */
+
+long seq_pos = 0;        /* position of displayed digital lines  */
+long maxbytes;           /* the max. allocation of memory in bytes    */
+long blk_adr;            /* start of block behind the seq.  */
+long blk_len;            /* length of block  */
+long blk_cut = 0;        /* length of Block-cut   */
+long seq_start;          /* Start of the digitized music    */
+long seq_end;            /* end of the music */
+long fhbase;        /* Adresse des Zeichensatzes fuer 8x16 Pixel (#2) */
+long fmbase;        /* Adresse des Zeichensatzes fuer 8x8 Pixel  (#1) */
+long sbase;         /* Startadresse des Bildschirms    */
+
+long blk_start,blk_end;  /* block start and end position    */
+long wind_start[WINDMAX];
+long wind_end[WINDMAX];
+long res[] = { 16,32,64,128,256,512,640,1024,2048,4096,6400,8192,10240,16384,
+               32768,65536,0 };    /* <all bytes< pos. 16   */
+
+struct SNG {     /* structure for make song    */
+     int  wind_nr;  /* 0 - SONGMAX */
+     int  repeat;
+     char dir;      /* 0: Backward, -1: Forward    */
+
+     char attr;     /* effects 0:nothing,1:hall,2:echo,3:change,4:volume   */
+     char spd;
+     char len;
+     int  loops;
+     char echo;     /* for echo and volume together!   */
+} sng[SONGMAX];
+
+long attrlen[] = { 32,64,128,256,512,768,1024,1536,2048,3072,4096,8192,
+                   12288,16384,32768,65536 };
+
+int pt_index[] = {SEQGOTO,EDITGOTO, SGINS,EDITFROM, SGINS,EDITNR,
+                  COPYBOX,COPYFROM, COPYBOX,COPYLEN, COPYBOX,COPYTO,
+                  DELBOX,DELFROM, DELBOX,DELLEN, PLAYBOX,PLAYEDIT,
+                  WNDGOTO,EDITGO ,-1,-1};
+
+int wnd_list[] = {WINDOW1,WINDOW2,WINDOW3,WINDOW4,WINDOW5,WINDOW6,
+                  WINDOW7,WINDOW8,WINDOW9,WINDOW10};
+int rpt_list[] = {REPEAT1,REPEAT2,REPEAT3,REPEAT4,REPEAT5,REPEAT6,
+                  REPEAT7,REPEAT8,REPEAT9,REPEAT10};
+int name_list[]= {NAME1,NAME2,NAME3,NAME4,NAME5,NAME6,NAME7,NAME8,
+                  NAME9,NAME10};
+int dir_list[] = {BACK1,BACK2,BACK3,BACK4,BACK5,BACK6,BACK7,BACK8,
+                  BACK9,BACK10};
+int edit_list[]= {EDIT1,EDIT2,EDIT3,EDIT4,EDIT5,EDIT6,EDIT7,EDIT8,
+                  EDIT9,EDIT10};
+
+/*                       1    2    3    4    5    6    7    8    9    0    */
+int  timer_data[] = {    0x1d,0x1f,0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x28,
+                         0x2a,0x2c,0x2e,0x30,0x34,0x38,0x3c,0x40,0x44,0x48,
+                         0x4c,0x50,0x58,0x60,0x70,0x80,0x98,0xb8,0xe0,0xff };
+
+int nr_cmd = 51*4;  /* 51 commands now available   */
+int cmd_crd[]= {    /* x1,y1,x2,y2 */
+     554,290,635,343,         /* MORE INFO 0 */
+     554,345,635,399,         /* QUIT      1 */
+     0,290,72,343,            /* RECORD    2 */
+     74,290,152,343,          /* PLAY SEQ  3 */
+     474,290,552,343,         /* SETTINGS  4 */
+     394,290,472,343,         /* SAVE SEQ  5 */
+     394,345,472,399,         /* LOAD SEQ  6 */
+     0,345,72,371,            /* PLAY      7 */
+     317,265,352,286,         /* >         8 */
+     356,265,391,286,         /* >>        9 */
+     395,265,431,286,         /* >>>      10 */
+     195,265,231,286,         /* <<<      11 */
+     235,265,271,286,         /* <<       12 */
+     275,265,311,286,         /* <        13 */
+     8,267,24,285,            /* |<- Wnd  14 */
+     27,267,45,285,           /* Wnd ->|  15 */
+     420,24,438,43,           /* |<- Blk  16 */
+     442,24,460,43,           /* Blk ->|  17 */
+     48,266,70,285,           /* Wnd DEL  18 */
+     554,266,581,285,         /* Wnd SAVE 19 */
+     585,266,612,285,         /* Wnd LOAD 20 */
+     616,266,638,285,         /* Wnd REC  21 */
+     81,265,116,286,          /* <- SEQ   22 */
+     119,265,154,286,         /* <- WND   23 */
+     157,265,192,286,         /* <- BLK   24 */
+     434,265,467,286,         /* BLK ->   25 */
+     470,265,505,286,         /* WND ->   26 */
+     508,265,541,286,         /* SEQ ->   27 */
+     234,290,313,316,         /* PLAY WND 28 */
+     234,372,313,399,         /* CLR SEQ  29 */
+     157,384,170,395,         /* WND+     30 */
+     173,384,192,395,         /* WND++    31 */
+     195,384,224,395,         /* WND+++   32 */
+     2,384,27,395,            /* WND---   33 */
+     30,384,50,395,           /* WND--    34 */
+     53,384,68,395,           /* WND-     35 */
+     154,345,232,372,         /* DIR      36 */
+     74,345,152,372,          /* FORMAT   37 */
+     528,24,550,43,           /* BLK CUT  38 */
+     464,24,486,43,           /* BLK DEL  39 */
+     616,24,638,43,           /* BLK REC  40 */
+     554,24,581,43,           /* BLK SAVE 41 */
+     585,24,612,43,           /* BLK LOAD 42 */
+     490,24,524,43,           /* BLK PAST 43 */
+     234,318,313,344,         /* PLAY BLK 44 */
+     474,345,552,399,         /* MAKE SNG 45 */
+     234,345,313,370,         /* CLR SONG 46 */
+     315,290,392,343,         /* SAVE SNG 47 */
+     315,345,392,399,         /* LOAD SNG 48 */
+     154,290,232,343,         /* PLAY SNG 49 */
+     128,380,152,396          /* GOTO WND 50 */
+     };
+
+long poketab[] = {
+          0x08000000,0x09000000,0x0a000000,  /* 00     */
+          0x08000000,0x09000000,0x0a000200,  /* 01     */
+          0x08000000,0x09000000,0x0a000300,  /* 02     */
+          0x08000200,0x09000200,0x0a000200,  /* 03     */
+          0x08000500,0x09000000,0x0a000000,  /* 04     */
+          0x08000500,0x09000200,0x0a000000,  /* 05     */
+          0x08000600,0x09000100,0x0a000000,  /* 06     */
+          0x08000600,0x09000200,0x0a000100,  /* 07     */
+          0x08000700,0x09000100,0x0a000000,  /* 08     */
+          0x08000700,0x09000200,0x0a000000,  /* 09     */
+          0x08000700,0x09000300,0x0a000100,  /* 0a     */
+          0x08000800,0x09000000,0x0a000000,  /* 0b     */
+          0x08000800,0x09000200,0x0a000000,  /* 0c     */
+          0x08000800,0x09000300,0x0a000100,  /* 0d     */
+          0x08000800,0x09000400,0x0a000100,  /* 0e     */
+          0x08000900,0x09000000,0x0a000000,  /* 0f     */
+
+          0x08000900,0x09000200,0x0a000000,  /* 10     */
+          0x08000900,0x09000300,0x0a000100,  /* 11     */
+          0x08000900,0x09000400,0x0a000100,  /* 12     */
+          0x08000900,0x09000500,0x0a000000,  /* 13     */
+          0x08000900,0x09000500,0x0a000200,  /* 14     */
+          0x08000900,0x09000600,0x0a000000,  /* 15     */
+          0x08000900,0x09000600,0x0a000200,  /* 16     */
+          0x08000a00,0x09000200,0x0a000000,  /* 17     */
+          0x08000a00,0x09000200,0x0a000200,  /* 18     */
+          0x08000a00,0x09000400,0x0a000100,  /* 19     */
+          0x08000a00,0x09000500,0x0a000000,  /* 1a     */
+          0x08000a00,0x09000500,0x0a000200,  /* 1b     */
+          0x08000a00,0x09000600,0x0a000100,  /* 1c     */
+          0x08000a00,0x09000600,0x0a000300,  /* 1d     */
+          0x08000b00,0x09000100,0x0a000000,  /* 1e     */
+          0x08000b00,0x09000200,0x0a000100,  /* 1f     */
+
+          0x08000b00,0x09000300,0x0a000100,  /* 20     */
+          0x08000b00,0x09000400,0x0a000100,  /* 21     */
+          0x08000b00,0x09000500,0x0a000100,  /* 22     */
+          0x08000b00,0x09000600,0x0a000000,  /* 23     */
+          0x08000b00,0x09000600,0x0a000200,  /* 24     */
+          0x08000b00,0x09000700,0x0a000000,  /* 25     */
+          0x08000b00,0x09000700,0x0a000100,  /* 26     */
+          0x08000b00,0x09000700,0x0a000300,  /* 27     */
+          0x08000b00,0x09000700,0x0a000400,  /* 28     */
+          0x08000b00,0x09000800,0x0a000100,  /* 29     */
+          0x08000b00,0x09000800,0x0a000300,  /* 2a     */
+          0x08000b00,0x09000800,0x0a000400,  /* 2b     */
+          0x08000b00,0x09000800,0x0a000500,  /* 2c     */
+          0x08000b00,0x09000800,0x0a000500,  /* 2d     */
+          0x08000c00,0x09000200,0x0a000000,  /* 2e     */
+          0x08000c00,0x09000200,0x0a000200,  /* 2f     */
+
+          0x08000c00,0x09000400,0x0a000100,  /* 30     */
+          0x08000c00,0x09000500,0x0a000000,  /* 33     */
+          0x08000c00,0x09000500,0x0a000300,  /* 32     */
+          0x08000c00,0x09000600,0x0a000000,  /* 33     */
+          0x08000c00,0x09000600,0x0a000200,  /* 34     */
+          0x08000c00,0x09000700,0x0a000000,  /* 35     */
+          0x08000c00,0x09000700,0x0a000300,  /* 36     */
+          0x08000c00,0x09000700,0x0a000400,  /* 37     */
+          0x08000c00,0x09000800,0x0a000000,  /* 38     */
+          0x08000c00,0x09000800,0x0a000300,  /* 39     */
+          0x08000c00,0x09000800,0x0a000400,  /* 3a     */
+          0x08000c00,0x09000800,0x0a000500,  /* 3b     */
+          0x08000c00,0x09000900,0x0a000000,  /* 3c     */
+          0x08000c00,0x09000900,0x0a000300,  /* 3d     */
+          0x08000c00,0x09000900,0x0a000400,  /* 3e     */
+          0x08000c00,0x09000900,0x0a000500,  /* 3f     */
+          0x08000c00,0x09000900,0x0a000500   /* 40     */
+     };
+
+
+struct a_i {        /* Struktur des ALINE-Variablenspeichers     */
+     int  v_planes;
+     int  v_lin_wr;
+     int  *CONTRL;
+     int  *INTIN;
+     int  *PTSIN;
+     int  *INTOUT;
+     int  *PTSOUT;
+     int schrott[11];
+     long *patptr;
+} *Line_A;
+
+/*******************************************************************************
+********************************************************************************
+***  The main part of the program...                                         ***
+********************************************************************************
+*******************************************************************************/
+main()
+{
+  register int a;
+
+     appl_init();   /* initialition of AES   */
+     a_init();      /* initialition of Line_a00x commands   */
+
+     graf_mouse(0,0l);   /* Arrow shape as mouse definition */
+
+     if (Getrez() != 2) {     /* is screen resolution alright?   */
+          form_alert(1,"[1][Wrong screen resolution!|Restart in hires!][QUIT]");
+          Pterm0();      /* in color rez program quits */
+     }
+
+     if (!rsrc_load("msampler.rsc")) {
+          form_alert(1,"[1][Cannot load the file|<MSAMPLER.RSC>!][QUIT]");
+          Pterm0();
+     }
+
+     free_bytes = Malloc(-1l);     /* get number of free bytes   */
+     if (free_bytes < 33000l) {    /* unsufficient bytes free?   */
+          form_alert(1,"[1][Unsufficient memory free!| ][QUIT]");
+          Pterm0();      /* quit if memory's not available  */
+     }
+
+     pic_adr = (long *) Malloc(32000l);      /* creates space for picture  */
+
+     if (!load("msampler.art",0,32000l,pic_adr))  /* load picture to pic_adr */
+          Pterm0();
+
+     screen = (long *) Physbase(); /* gets screen location  */
+     copy_pic(0);   /* copies picture into screen */
+
+     seq_path[0] = (char) Dgetdrv()+0x41;    /* Set current drive     */
+     song_path[0] = seq_path[0];
+
+     /* reserve available memory for sequence music    */
+     maxbytes = Malloc(-1l)-0xa00; /* how many bytes are free?   */
+     maxbytes = (maxbytes/1024)*1024;   /* auf KB genau!    */
+     blk_adr = seq_end+1;
+     blk_len = 0;
+     seq_start = Malloc(maxbytes); /* start adress     */
+     seq_end = seq_start+maxbytes;      /* end adress  */
+     res[16] = maxbytes;      /* all bytes displayed   */
+
+     clr_ptext();
+
+     ssp = Super(0l);    /* enter supervisor mode */
+     asm {
+               move.b    0x484,key_state(A4) /* save the original key state */
+               move.b    #6,0x484  /* no key tone or key repeat  */
+     }
+
+     clr_sngfield(0,SONGMAX);
+     for (a = 0; a < WINDMAX; a++) {    /* initialisation of all windows   */
+          wind_speed[a] = speed;
+          wind_end[a] = wind_start[a] = 0l;
+     }
+     blk_start = blk_end = 0; /* block is not yet really defined */
+     blk_speed = speed;
+     def_kind = -1;  /* not yet def */
+
+     Super(ssp);    /* reenter user mode     */
+     displ_graph(); /* displays the graphical display of digi sound   */
+     copy_pic(1);   /* save picture     */
+     close(0);      /* display names    */
+
+     ssp = 0;       /* print number of activated default window  */
+     dez_str(wndnr,(long) akt_wind,3);
+     print_msg(wndnr,16,380,2,0);
+
+
+   while (1) { /* LOOP FOREVER!    */
+     evnt_button(1,1,1,&mouse_x,&mouse_y,&ret,&ret);   /* Button event ready */
+     if (exec_cmd())    /* execute command (icon below mouse represents cmd) */
+          displ_graph(); /* displays the graphical display of digi sound   */
+   }
+}
+
+
+/*****    copies picture into screen    *****/
+copy_pic(fl)
+  register int fl;   /* fl = 0 : pic into screen / fl = 1 : screen into pic */
+{
+  register int count;
+
+     hide_mouse();
+     if (!fl)
+          for (count = 0; count < 8000; count++)
+               *(screen+count) = *(pic_adr+count);
+     else
+          for (count = 0; count < 8000; count++)
+               *(pic_adr+count) = *(screen+count);
+     show_mouse();
+}
+
+
+/*****    loads a file with [name,attribute,length,destination adress]  *****/
+load(name,attr,length,dest_adr)
+  register char name[];
+  register int attr;
+  register long dest_adr,length;
+{
+  register int handle;
+
+     handle = Fopen(name,attr);    /* opens the data file   */
+     if (handle < 5) {
+          form_alert(1,"[1][Cannot read data file!| ][CANCEL]");
+          Fclose(handle);
+          return 0; /* on error return FALSE */
+     }
+     Fread(handle,length,dest_adr);     /* reads file into memory     */
+     return 1; /* else return TRUE */
+}
+
+
+/*****    Stores a numeric string in another string    *****/
+dez_str(string,nr,length)
+  register char *string;
+  register int length;
+  register long nr;
+{
+     if (!length)
+          return;
+     dez_str(string,(long) (nr/10), --length);
+     while (nr >= 10)  nr -= 10;
+     *(string+ssp) = (0x30 + (char) nr);
+     ssp++;    /* increases string pointer   */
+}
+
+
+/*****    executes the desired command (represented by a hires icon)  *****/
+exec_cmd()
+{
+  register int a,b;
+  int work;
+  long wnd_start,wnd_end;
+  long pos;
+
+     wnd_start = seq_start+wind_start[akt_wind];
+     wnd_end =   seq_start+wind_end[akt_wind];
+
+     for (a = 0; a < nr_cmd; a += 4)       /* test from 1st command */
+          if (mouse_x >= cmd_crd[a] && mouse_y >= cmd_crd[a+1] && mouse_x <=
+              cmd_crd[a+2] && mouse_y <= cmd_crd[a+3]) {
+               copy_pic(1);
+               hide_mouse();
+               fill_rectangle(cmd_crd[a],cmd_crd[a+1],cmd_crd[a+2],cmd_crd[a+3],
+                              2,black,0);
+               show_mouse();
+               break;
+          }
+
+     /* to avoid new build-up of graph : b = 0    */
+
+     b = 1;    /* do not avoid redraw of graph on default!  */
+     switch (a/4) {   /* jump to the calculated command  */
+          case 0:   /* More Info   */
+               more_info();
+               b = 0;
+               break;
+          case 1:   /* Quit   */
+               quit();
+               b = 0;
+               break;
+          case 2:   /* Record */
+               record();
+               break;
+          case 3:   /* Play seq    */
+               play_seq();
+               b = 0;    /* avoid redraw     */
+               break;
+          case 4:   /* Settings    */
+               settings();
+               break;
+          case 5:   /* Save sequence    */
+               save(seq_start,seq_end,seq_path,seq_name,speed);
+               b = 0;
+               break;
+          case 6:   /* Load sequence    */
+               load_seq();
+               break;
+          case 7:   /* Play   */
+               play();
+               b = 0;    /* avoid redraw     */
+               break;
+          case 8:   /* > */
+               forwrd(res[displ_nr]/2);
+               break;
+          case 9:   /* >>     */
+               forwrd(res[displ_nr]*2);
+               break;
+          case 10:  /* >>>    */
+               forwrd(res[displ_nr]*8);
+               break;
+          case 11:  /* <<<    */
+               backwrd(res[displ_nr]*8);
+               break;
+          case 12:  /* <<     */
+               backwrd(res[displ_nr]*2);
+               break;
+          case 13:  /* <      */
+               backwrd(res[displ_nr]/2);
+               break;
+          case 14:  /* |<- Wnd     */
+               set2_def();
+               b = 0;    /* avoid redraw     */
+               break;
+          case 15:  /* Wnd ->|     */
+               set3_def();
+               b = 0;    /* avoid redraw     */
+               break;
+          case 16:  /* |<- Blk     */
+               set_def(&blk_start,&blk_end,0,1,"Define Block Start");
+               b = 0;    /* avoid redraw     */
+               break;
+          case 17:  /* Blk ->|     */
+               set_def(&blk_end,&blk_start,1,1,"Define Block End");
+               b = 0;    /* avoid redraw     */
+               break;
+          case 18:  /* Wnd DEL     */
+               if (form_alert(0,"[1][Delete Window?| ][YES|NO]") == 1)
+                  del_blk(&wind_start[akt_wind],&wind_end[akt_wind],0,akt_wind);
+               break;
+          case 19:  /* Wnd SAVE    */
+               save(wnd_start,wnd_end,seq_path,seq_name,wind_speed[akt_wind]);
+               b = 0;
+               break;
+          case 20:  /* Wnd LOAD    */
+               load_blk(wnd_start,wnd_end,&wind_speed[akt_wind],&pos);
+               if (pos)
+                    wind_end[akt_wind] = wind_start[akt_wind]+pos;
+               break;
+          case 21:  /* Wnd REC     */
+               blk_rec(wnd_start,wnd_end);
+               wind_speed[akt_wind] = speed;
+               break;
+          case 22:  /* <- SEQ */
+               seq_pos = 0;
+               break;
+          case 23:  /* <- WND */
+               seq_pos = wind_start[akt_wind];
+               backwrd(res[displ_nr]/2);
+               break;
+          case 24:  /* <- BLK */
+               seq_pos = blk_start;
+               backwrd(res[displ_nr]/2);
+               break;
+          case 25:  /* BLK -> */
+               seq_pos = blk_end;
+               backwrd(res[displ_nr]/2);
+               break;
+          case 26:  /* WND -> */
+               seq_pos = wind_end[akt_wind];
+               backwrd(res[displ_nr]/2);
+               break;
+          case 27:  /* SEQ -> */
+               forwrd(seq_end-seq_start-seq_pos);
+               backwrd(res[displ_nr]/2);
+               break;
+          case 28:  /* PLAY WND    */
+               work = (int) speed;
+               speed = wind_speed[akt_wind];
+               play_blk(wnd_start,wnd_end);  /* play activated window */
+               speed = (char) work;
+               b = 0;    /* avoid redraw     */
+               break;
+          case 29:  /* CLR SEQ     */
+               if (form_alert(0,"[1][Clear Sequence?| ][YES|NO]") == 1)
+                    clr_blk(seq_start,seq_end);
+               break;
+          case 30:  /* WND+   */
+               chng_wndnr(1);
+               break;
+          case 31:  /* WND++  */
+               chng_wndnr(10);
+               break;
+          case 32:  /* WND+++ */
+               chng_wndnr(100);
+               break;
+          case 33:  /* WND--- */
+               chng_wndnr(-100);
+               break;
+          case 34:  /* WND--  */
+               chng_wndnr(-10);
+               break;
+          case 35:  /* WND-   */
+               chng_wndnr(-1);
+               break;
+          case 36:  /* DIR    */
+               dir();
+               b = 0;
+               break;
+          case 37:  /* Format */
+               format();
+               b = 0;
+               break;
+          case 38:  /* Blk Cut     */
+               copy(seq_start+blk_start,seq_start+blk_end,blk_adr,blk_len,
+                    &blk_cut);
+               blk_speed = speed;
+               b = 0;    /* avoid redraw     */
+               break;
+          case 39:  /* Blk Del     */
+               if (form_alert(0,"[1][Delete Block?| ][YES|NO]") == 1)
+                    del_blk(&blk_start,&blk_end,1,WINDMAX);
+               break;
+          case 40:  /* Blk Rec     */
+               if (blk_rec(blk_adr,blk_adr+blk_len)) {
+                    blk_cut = blk_len;
+                    blk_speed = speed;
+               }
+               b = 0;    /* avoid redraw     */
+               break;
+          case 41:  /* Blk SAVE    */
+               save(blk_adr,blk_adr+blk_cut,seq_path,seq_name,blk_speed);
+               b = 0;
+               break;
+          case 42:  /* Blk LOAD    */
+               load_blk(blk_adr,blk_adr+blk_len,&blk_speed,&pos);
+               if (pos)
+                    blk_cut = pos;
+               b = 0;
+               break;
+          case 43:  /* Blk PASTE   */
+               copy(blk_adr,blk_adr+blk_cut,seq_start+blk_start,
+                    seq_end-(seq_start+blk_start),&pos);
+               break;
+          case 44:  /* PLAY BLK    */
+               work = (int) speed;
+               speed = blk_speed;
+               play_blk(blk_adr,blk_adr+blk_cut);
+               speed = (char) work;
+               b = 0;    /* avoid redraw     */
+               break;
+          case 45:  /* MAKE SNG    */
+               make_song();
+               b = 0;
+               break;
+          case 46:  /* CLR SONG    */
+               if (form_alert(0,"[1][Clear song?| ][YES|NO]") == 1)
+                    clr_sngfield(0,SONGMAX);
+               b = 0;
+               break;
+          case 47:  /* Save song   */
+               save_sng();
+               b = 0;
+               break;
+          case 48:  /* Load song   */
+               load_sng();
+               break;
+          case 49:  /* Play song   */
+               play_sng();
+               b = 0;
+               break;
+          case 50:  /* goto wnd    */
+               if (formula(WNDGOTO,EDITGO) == GOOK)
+                    chng_wndnr(get_numeric(EDITGO)-akt_wind);
+               break;
+     }
+
+     if (a < nr_cmd) {
+          copy_pic(0);
+          return b;
+     }
+     else /* mouse somewhere else  */
+          if (mouse_y >= 50 && mouse_y <= 239) {  /* mouse in graph (def.) */
+               pos = seq_pos+((float) res[displ_nr]/640)*mouse_x;
+               if (seq_start+pos > seq_end || def_kind == -1)
+                    return 0;
+               *def_pos = pos;
+               if (!def_kind) {    /* def start   */
+                    if (*def_pos >= *other_pos)
+                         *other_pos = *def_pos;
+               }
+               else      /* def end     */
+                    if (*def_pos <= *other_pos)
+                         *other_pos = *def_pos;
+               return 1;
+          }
+          else if (mouse_y >=242 && mouse_y <= 261) {  /* graph sliding    */
+               sliding();
+               return 1;
+          }
+
+     return 0;      /* no cmd activated */
+}
+
+
+/*****    quits program if wished  *****/
+quit()
+{
+     if (form_alert(0,"[1][You wanna leave me?| ][YEAH|OH NO]") == 1) {
+          ssp = Super(0l);
+          asm {     move.b    key_state(A4),0x484 };
+          Super(ssp);    /* leave program with user mode    */
+          Pterm0(); /* quit to desktop  */
+     }
+}
+
+
+/*****    displays some kinda good info *****/
+more_info()
+{
+     formula(MOREINFO,0);     /* displays info formula */
+}
+
+
+/*****    builds a formula on the screen     *****/
+formula(nr,edit_nr)
+  register int nr,edit_nr;
+{
+  int x,y,w,h,index;
+
+     rsrc_gaddr(0,nr,&tree);  /* gets start adr. of tree    */
+     form_center (tree, &x,&y,&w,&h);   /* centers the formula   */
+
+     form_dial (0, x,y,w,h, x,y,w,h);   /* reserve screen memory */
+     form_dial (2, x,y,w,h, 0,0,639,399);
+     objc_draw (tree,0,4, x,y,w,h);     /* prints the formula    */
+     index = form_do (tree,edit_nr);
+     form_dial (1, x,y,w,h, 0,19,639,399);
+     form_dial (3, x,y,w,h, x,y,w,h);
+     objc_change (tree, index,0,x,y,w,h, NORMAL,1);
+     objc_draw (tree,0,0, 0,0,0,0);
+
+     return index;
+}
+
+
+/********************
+** Line_A-Routinen **
+********************/
+/*****     Farbe und Koordinaten in Line_A-Variablenbereich kopieren     *****/
+a_xycol(x1,y1,x2,y2)
+  register int x1,y1,x2,y2;
+{
+     Line2_A[19] = x1;
+     Line2_A[20] = y1;
+     Line2_A[21] = x2;
+     Line2_A[22] = y2;
+     Line2_A[12] = 1;
+     Line2_A[13] = 0;
+     Line2_A[14] = 0;
+     Line2_A[15] = 0;
+}
+
+
+/*****     FÅllvariablen setzen     *****/
+a_fill(wr_mode,patptr,patmask)
+  register int wr_mode,patmask,*patptr;
+{
+     Line2_A[18] = wr_mode;
+     Line_A->patptr = (long *) patptr;
+     Line2_A[25] = patmask;
+}
+
+
+a_2arg(x1,y1,x2,y2,wr_mode,patptr,patmask)
+  register int x1,y1,x2,y2;
+  int wr_mode,patmask,*patptr;
+{
+     a_xycol(x1,y1,x2,y2);
+     a_fill(wr_mode,patptr,patmask);
+}
+
+
+/***** Initialisiert die LINEA00x-Grafikbefehle. Es werden diverse Zeiger auf
+       bestimmte Felder zurueckgegeben: So wird ein Zeiger auf die Zeichen-
+       saetze in A1 und in A0 auf den Variablenspeicher abgegeben *****/
+a_init()
+{
+  register long A_Base;
+
+       asm {
+               dc.w      0xa000    /* Initialisiert die Grafikbefehle */
+               move.l    A0,A_Base /* Adresse des Grafikvariablenspeichers */
+
+               move.l    #8,D0     /* Adresse des 16x8-Pixel-Zeichensatzes */
+               move.l    0(A1,D0.w),A0  /* errechnen und der Variablen     */
+               move.l    76(A0),fhbase(A4)   /* fhbase uebergeben     */
+
+               move.l    #4,D0     /* Das Gleiche wie oben, jedoch fuer den*/
+               move.l    0(A1,D0.w),A0  /* 8x8-Pixelzeichensatz  */
+               move.l    76(A0),fmbase(A4)
+       } /* end of asm */
+
+     sbase = Logbase();  /* Adresse des Bildschirm holen    */
+     Line_A = (struct a_i *) A_Base;    /* Variablenspeicher beginnt mit einer
+                                           Struktur -> diese in Line_A holen */
+     Line2_A = (int *) Line_A;
+     Line2_A[27] = 0;
+}
+
+
+/*****     Linie ziehen     *****/
+line(x1,y1,x2,y2,wr_mode,mask)
+  register int x1,y1,x2,y2;
+  int mask,wr_mode;
+{
+     a_xycol(x1,y1,x2,y2);
+     Line2_A[16] = -1;
+     Line2_A[17] = mask;
+     Line2_A[18] = wr_mode;
+     asm { dc.w 0xa003 };     /* Linie ziehen */
+}
+
+
+/*****     Rechteck ausfÅllen     *****/
+fill_rectangle(x1,y1,x2,y2,wr_mode,patptr,patmask)
+  register int x1,y1,x2,y2;
+  int wr_mode,patmask,*patptr;
+{
+     a_2arg(x1,y1,x2,y2,wr_mode,patptr,patmask);
+     asm { dc.w 0xa005 };
+}
+
+
+show_mouse()
+{
+  register int *ptr;
+
+     ptr = Line_A->CONTRL;
+     *(ptr+1) = 0;
+     *(ptr+3) = 1;
+     ptr = Line_A->INTIN;
+     *ptr = 0;
+
+     asm { dc.w 0xa009 };
+}
+
+
+hide_mouse()
+{
+     asm { dc.w 0xa00a };
+}
+
+
+/*****    records a new sequence into memory *****/
+record()
+{
+     blk_rec(seq_start,seq_end);   /* snd-digitise the whole seq. memory */
+}
+
+
+/*****    records a block (from ... to ...)  *****/
+blk_rec(start,end)
+  long start,end;
+{
+     if (form_alert(1,"[1][Are you ready?| ][YES|NO]") == 2)
+          return 0;      /* user wants to abort   */
+
+     init_snd();    /* sound chip initialisation  */
+
+     asm {
+
+          move.l    end(A6),WORK1       /* end of block     */
+
+          move.b    0xfffffa07,-(A7)    /* disable interrupts    */
+          move.b    0xfffffa09,-(A7)
+          move.b    #0x20,0xfffffa07
+          move.b    #0x40,0xfffffa09
+          andi.w    #0xf8ff,SR
+          ori.w     #0x700,SR
+
+          clr.l     D2
+          move.b    #0x20,D2
+          move.b    #14,0xffff8800
+          move.b    0xffff8800,D3
+          or.b      D2,D3
+          move.b    D3,0xffff8802
+
+          move.b    #7,0xffff8800
+          move.b    0xffff8800,D0
+          and.b     #0x7f,D0
+          move.b    D0,0xffff8802
+
+          move.l    start(A6),A2        /* start of block   */
+          lea       poketab(A4),A1      /* adress of volume values    */
+
+          move.b    #1,0xfffffa19       /* start timer a for countdown */
+
+
+          /*****    here we go...  *****/
+
+inloop:
+          clr.l     D5
+          move.b    #15,0xffff8800      /* reg. 15 selected */
+          move.b    0xffff8800,D5       /* get sound values from port b    */
+
+          move.b    #14,0xffff8800      /* strobe low output     */
+          move.b    0xffff8800,D1
+          and.b     #0xdf,D1
+          move.b    D1,0xffff8802
+          move.b    0xffff8800,D1       /* strobe high output    */
+          or.b      #0x20,D1
+          move.b    D1,0xffff8802
+
+          move.b    D5,(A2)+            /* strores the received data  */
+          cmpa.l    WORK1,A2            /* end of block reached? */
+          bgt.s     back
+
+          /*****    output sound to monitor  *****/
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait
+
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+
+          bra.s     inloop
+
+back:
+          move.b    (A7)+,0xfffffa09
+          move.b    (A7)+,0xfffffa07
+          move.w    #0x2308,SR
+     }
+
+     reinit_snd();
+}
+
+
+/*****    sound chip initialisation for sound in or output  *****/
+init_snd()
+{
+     ssp = Super(0l);    /* enters supervisor mode     */
+     out_snd(initsnd);   /* sound reg. initialisation  */
+     set_ti_a();         /* set timer a for countdown  */
+
+     Ikbdws(0,off_mouse);
+}
+
+
+/*****    sets timer a ready for starting countdown    *****/
+/*****    !!! Supervisor mode must be activated !!!    *****/
+set_ti_a()
+{
+  char spd;
+
+     spd = timer_data[speed];      /* value for countdown   */
+
+     asm {
+               clr.b     0xfffffa19          /* disable timer a  */
+               ori.b     #0x20,0xfffffa07    /* IRQ Enable TI A  */
+               ori.b     #0x08,0xfffffa17    /* set SEI mode in Vector Reg. */
+               andi.b    #0xdf,0xfffffa13    /* IRQ Mask for TI-A     */
+               move.b    spd(A6),0xfffffa1f  /* Ti A data register    */
+     }
+}
+
+
+/*****    writes sound cmd string into sound chip *****/
+/*****    !!! Supervisor mode must be activated !!!    *****/
+out_snd(str)
+  int *str;
+{
+     asm {
+               move.l    str(A6),A0
+sound_loop:
+               move.w    (A0)+,D0
+               bmi       exit
+               move.w    (A0)+,D1
+
+               cmp.b     #7,D0
+               bne       set_snd2
+               move.b    D0,0xffff8800
+               move.b    0xffff8800,D0
+               and.b     #0xc0,D0
+               or.b      D1,D0
+               move.b    D0,0xffff8802
+               bra       sound_loop
+set_snd2:
+               move.b    D0,0xffff8800
+               move.b    D1,0xffff8802
+               bra       sound_loop
+
+exit:
+     }
+}
+
+
+/*****    sound chip and work mode reconstruction *****/
+reinit_snd()
+{
+  register long a;
+
+     Super(ssp);         /* enters user mode */
+     Ikbdws(0,on_mouse);
+
+     for (a = 0; a < 0x15000; a++);
+}
+
+
+/*****    plays the whole recorded sequence  *****/
+play_seq()
+{
+     play_blk(seq_start,seq_end);     /* play the whole sequence */
+}
+
+
+/*****    plays a block (from ... to ...)    *****/
+play_blk(start,end)
+  long start,end;
+{
+     init_snd();
+
+     asm {
+
+          move.l    end(A6),WORK1       /* end of block     */
+
+          move.b    0xfffffa07,-(A7)    /* disable interrupts    */
+          move.b    0xfffffa09,-(A7)
+          move.b    #0x20,0xfffffa07
+          move.b    #0x40,0xfffffa09
+          andi.w    #0xf8ff,SR
+          ori.w     #0x700,SR
+
+          move.l    start(A6),A2        /* start of block   */
+          move.l    end(A6),A3          /* end of block     */
+          lea       poketab(A4),A1      /* adress of volume values    */
+
+          move.b    #1,0xfffffa19       /* start timer a for countdown */
+          move.b    0xfffa01,D6         /* keybrd and mouse status    */
+
+
+          /*****    here we go...  *****/
+outloop:
+          clr.l     D5
+          move.b    (A2)+,D5            /* load data from memory */
+          cmpa.l     A3,A2              /* end of block?    */
+          bgt.s     back
+
+          /*****    output sound to monitor  *****/
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+
+          move.b    D6,D7
+          move.b    0xfffa01,D6         /* test the keybrd status     */
+          cmp.b     D6,D7
+          beq.s     outloop
+
+back:
+          move.b    (A7)+,0xfffffa09
+          move.b    (A7)+,0xfffffa07
+          move.w    #0x2308,SR
+     }
+
+     reinit_snd();
+}
+
+
+/***** holt Te-Ptext-Adresse eines Index *****/
+get_ptext(index,point)
+  register int index;
+  long *point;
+{
+  register int *i;
+  register long *ptr;
+
+     i = tree+(index*12)+6; /* zeigt auf Objc_Spezifikation */
+     ptr = (long *) i;
+     ptr = (long *) (*ptr); /* aus Spez. den Pointer auf Tedinfo */
+     *point = *ptr; /* aus tedinfo ptext */
+}
+
+
+/*****    administrates the setting formula  *****/
+settings()
+{
+  int x,y,w,h,index;
+  register int a,fl;
+  char *ptr;
+  register long kb,kb_old;
+
+     fl = 0;
+
+     rsrc_gaddr(0,SETTINGS,&tree); /* gets start adr. of tree    */
+     prepare_bttn(DATA,30,speed);  /* clears the buttons and sets the selec. */
+     prepare_bttn(RES,17,displ_nr);
+
+     get_ptext(SEQLEN,&ptr);
+     ssp = 0;
+     kb_old = (seq_end-seq_start)/1024;
+     dez_str(ptr,kb_old,4);
+
+next:
+     get_txtstr(WNDSPD,&ptr); /* get adress of text string  */
+     ssp = 0;
+     dez_str(ptr,(long) wind_speed[akt_wind]+1,2);
+
+     if (!fl) {
+          form_center (tree, &x,&y,&w,&h);   /* centers the formula   */
+          form_dial (0, x,y,w,h, x,y,w,h);   /* reserve screen memory */
+          form_dial (2, x,y,w,h, 0,0,639,399);
+     }
+     objc_draw (tree,0,4, x,y,w,h);     /* prints the formula    */
+     index = form_do (tree,SEQLEN);
+     objc_change (tree, index,0,x,y,w,h, NORMAL,1);
+
+     if (index == EDITWSPD) {      /* if user changes wind speed */
+          rsrc_gaddr(0,EDITSPD,&tree);      /* gets start adr. of tree   */
+          prepare_bttn(SPD,30,(int) wind_speed[akt_wind]);
+          if (formula(EDITSPD,0) == SPDOK)
+               wind_speed[akt_wind] = (char) get_select(SPD,30);
+          fl = 1;
+          rsrc_gaddr(0,SETTINGS,&tree); /* gets start adr. of tree    */
+          goto next;
+     }
+     if (index == WNDADJST) { /* window speed is actualle speed  */
+          speed = get_select(DATA,30);  /* get installed fine tune    */
+          wind_speed[akt_wind] = speed;
+          fl = 1;
+          goto next;
+     }
+     if (index == WNDSADJT) { /* window speed is actualle speed  */
+          speed = get_select(DATA,30);  /* get installed fine tune    */
+          for (a = 0; a < WINDMAX; a++)
+               wind_speed[a] = speed;
+          fl = 1;
+          goto next;
+     }
+
+     form_dial (1, x,y,w,h, 0,19,639,399);
+     form_dial (3, x,y,w,h, x,y,w,h);
+     objc_draw (tree,0,0, 0,0,0,0);
+
+     if (index != SETOK)
+          return;
+
+     kb = (long) get_numeric(SEQLEN);
+     if (kb > maxbytes/1024) {
+          ssp = 33;
+          dez_str(too_big,(long) maxbytes/1024,4);
+          form_alert(1,too_big);
+     }
+     else if (kb && kb <= maxbytes/1024 && kb != kb_old)
+          alloc((long) kb*1024l);  /* changes the length of the seq.  */
+
+     displ_nr = get_select(RES,17);
+     if (displ_nr == 16) /* bei all available bytes -> an anfang */
+          seq_pos = 0;
+     speed = get_select(DATA,30);  /* get installed fine tune    */
+}
+
+
+/*****    allocates the sequence with a different length    *****/
+alloc(bytes)
+  long bytes;
+{
+  register char *ptr;
+  register int a,flag;
+  register long len,end;
+
+     flag = 0;
+
+     len = seq_end-seq_start;
+     if (bytes > len)    /* neuen Bereich lîschen!     */
+          for (ptr = (char *) seq_start; len <= bytes; len++)
+               *(ptr+len) = 0;
+
+     seq_end = seq_start+bytes;    /* gets the end adress of alloc. mem */
+     res[16] = bytes;    /* all bytes displayed in graph    */
+     len = seq_end-seq_start;
+
+     blk_adr = seq_end+1;     /* start of BLOCK is end of seq.   */
+     blk_len = maxbytes-len-1;     /* get length of BLOCK   */
+     blk_cut = 0;
+     form_alert(1,"[1][Memory konfiguration|changed!|Had to reset BLOCK!|][NOTI\
+CED]");
+
+     if (seq_start+seq_pos > seq_end)
+          seq_pos = 0;
+
+     for (a = 0; a < WINDMAX; a++) {
+          if (wind_end[a] > len) {
+               wind_end[a] = len;
+               flag = 1;
+          }
+          if (wind_start[a] > len) {
+               wind_start[a] = len;
+               flag = 1;
+          }
+     }
+     if (flag)
+          form_alert(1,"[1][Had to adapt some windows|on account of the change|\
+of sequence length!][ACCEPTED]");
+
+     flag = 0;
+     if (blk_start > len) {
+          blk_start = len;
+          flag = 1;
+     }
+     if (blk_end > len) {
+          blk_end = len;
+          flag = 1;
+     }
+     if (flag)
+          form_alert(1,"[1][Had to adapt block def.|on account of the change|of\
+ sequence length!][ACCEPTED]");
+}
+
+
+/*****    clears the button field and sets the selected button   *****/
+prepare_bttn(index,nr,on_index)
+  register int index,nr,on_index;
+{
+  register int a;
+
+     for (a = 0; a < nr; a++)
+          state(index+a) = NORMAL;
+     state(index+on_index) = SELECT;
+}
+
+
+/*****    get the selected radio bttn of a group  *****/
+get_select(index,nr)
+  register int index,nr;
+{
+  register int a;
+
+     for (a = 0; a < nr; a++)
+          if (state(index+a) == SELECT)
+               break;
+
+     return a;
+}
+
+
+/*****    changes a string of numbers into a integer value  *****/
+get_numeric(edit_nr)
+  int edit_nr;
+{
+  register int i,j,potenz,k;
+  char *str;
+  long z,z2;
+
+     get_ptext(edit_nr,&str);      /* Holt Adresse der Eingabe   */
+
+     k = 0;
+     while (*(str+k)) k++;    /* Laenge ermitteln */
+
+     /* Folgende Schleife errechnet den Wert, indem es die einzelnen Nummern
+        mit 1, 10, 100, 1000, 10000... multipliziert und alle diese Nummern
+        zusammenzaehlt   */
+     /* Ganz hinten mit mal_1 beginnen     */
+     for (i = k-1, z = 0, potenz = 0; i >= 0; i--) {
+          if (*(str+i) == 0x5f)    /* Underspaces _ ueberlesen   */
+               continue;
+          for (j = 0, z2 = *(str+i) - 0x30; j < potenz; j++)
+               z2 *= 10; /* Richtige Potenz errechnen  */
+          z += z2;  /* Wert zu Gesamzzahl dazuaddieren */
+          potenz++;
+     }
+
+     if (z > (long) 32700) {  /* Ist Wert zu gross, dann Fehler ausgeben   */
+          form_alert(1,"[1][Your input is too large!| ][TRY AGAIN]");
+          *str = 0;
+          z = 0;    /* Zahl auf 0 setzen     */
+     }
+
+     return (int) z;     /* Errechnete Zahl zurueckgeben    */
+}
+
+
+/***** saves a block (its name is obligatory)     *****/
+save(from,to,path,name,spd)
+  register char spd;
+  register char *name,*path;
+  register long from,to;
+{
+  register int handle;
+
+     copy_str(path,path_name);     /* copy path to global work array  */
+     copy_str(name,file_name);     /*   "    */
+
+     handle = opn_save();     /* opens the file   */
+     if (handle > 5) {   /* saving can be continued, no error    */
+          copy_str(path_name,path);     /* get the new path */
+          copy_str(file_name,name);     /*   "    */
+          info_field[0] = (long) spd;
+          info_field[1] = to-from;
+          Fwrite(handle,8l,info_field); /* write first the info header     */
+          write(handle,to-from,from);   /* write it down    */
+     }
+     close(handle);
+}
+
+
+/*****    writes a file and watch the error output channel   *****/
+write(handle,len,start)
+  register int handle;
+  register long len,start;
+{
+     start = Fwrite(handle,len,start);  /* read it     */
+     if (start != len)
+          form_alert(1,"[1][Couldn't write the|whole data!][ACCEPTED]");
+}
+
+
+/*****    opens a file for writing with all godamn works    *****/
+opn_save()
+{
+  register int i;
+  register char j;
+  register int  handle;
+  register char dup[14];
+
+     if (!get_name())    /* displays the file selector box  */
+          return -20;    /* cancel?     */
+
+     set_path();    /* Pfad richtig setzen   */
+
+     handle = Fopen(file_name,1);  /* Datei oeffnen und Fehler abfragen    */
+     Fclose(handle);     /* Datei schliessen, Oeffnen war nur zwecks Fehler-
+                            ueberpruefung    */
+     if (handle >= 0) {  /* Existiert die Datei schon, dann verschiedene Aus-
+                            wahlmoeglichkeiten anbieten: Ueberschreiben, Re-
+                            namen oder Abbruch!   */
+         i = form_alert(1,"[2][There is already a file|with this name!|Shall I \
+change it into|<.BAK>?][YES|NO|CANCEL]");
+
+          if (i == 1) {  /* Der alte Dateiname wird in .BAK gewandelt */
+
+               for (i = 0;; i++) {      /* Im Dateinamen bis zu Extention  */
+                    j = file_name[i];   /* suchen */
+                    if (!j || j == 0x2e)
+                         break;
+                    dup[i] = j;
+               }
+
+               dup[i] = 0x2e;      /* Die neue Extention lautet unbedingt  */
+               dup[i+1] = 0x42;    /* .BAK   */
+               dup[i+2] = 0x41;
+               dup[i+3] = 0x4b;
+               dup[i+4] = 0;       /* Namensende setzen     */
+
+               Fdelete(dup);  /* Eventuelles alten .BAK-File loeschen */
+               Frename(0,file_name,dup);     /* und alte in .BAK benennen  */
+          }
+          else if (i == 3)    /* Abbruch, dann Fehlerkode zurueckgeben     */
+               return (-20);  /* -20 : Fehler     */
+
+     }
+
+     handle = Fcreate(file_name,0);     /* Datei unbedingt neu erzeuegen   */
+
+     if (handle < 0)     /* Fehler, dann stimmt was nicht!  */
+          form_alert (1,"[2][Cannot write on file!| ][ OK ]");
+
+     graf_mouse(2,0l);   /* mouse is now a bee    */
+
+     return handle; /* Fehler/Handle zurueckgeben */
+}
+
+
+/*****    sets the new or old path for gemdos     *****/
+set_path()
+{
+  register char path[40];    /* Arbeitsarray     */
+  register int i,j;
+
+     copy_str(path_name,path);     /* Zu uebernehmenden Pfad in Arbeitsarray
+                                      kopieren    */
+     set_drv();     /* Laufwerk setzen  */
+
+     i = 0;    /* Laenge des Pfadnamens ermitteln */
+     while ( *(path+i))
+          i++;
+     j = i;
+
+     while ( *(path+i) != 0x5c)
+          i--; /* Auf den letzten Backslash <\> positionieren    */
+
+     /* Ist der letzte Backslash der einzige (Trennung zwischen Laufwerksken-
+        nung und ersten Pfad (A:\...), dann aus diesem einen zweiten machen
+        (GEMDOS benotigt bei einem Positionieren auf den obersten Pfad immer
+        zwei Backslash als gueltige Pfadkennung!) */
+     if (*(path+i-1) == 0x3a) {    /* Einziger Backslash?   */
+          for (; j >= i; j--) /* Einen zweiten einfuegen    */
+               *(path+j+1) = *(path+j);
+          i++;
+     }
+
+     *(path+i+1) = 0;
+
+     Dsetpath(path);     /* Pfad fuer GEMDOS setzen    */
+}
+
+
+/*****    sets the new drive for gemdos *****/
+set_drv()
+{
+     drive = (*path_name)-0x41;    /* Holt LW aus Pfadnamen und uebergibt  */
+     Dsetdrv(drive);     /* es der GEMDOS-LW-Setzroutine    */
+}
+
+
+/*****    copies a string from source to destination adress *****/
+copy_str(from,to)
+  register char *from;
+  register char *to;
+{
+  register int length;
+
+     length = 0;    /* Ab Stringstart   */
+     while (*(from+length)) { /* Solange bis Zeichen 0 erreicht  */
+          *(to+length) = *(from+length);     /* Je ein Zeichen kopieren    */
+          length++;
+     }
+     *(to+length) = 0x0; /* In Zielstring ebenfalls Endmarke 0 setzen */
+
+     return length; /* Laenge zurueckgeben   */
+}
+
+
+/*****    opens the file selector box for file and path name selection *****/
+get_name()
+{
+  int bttn;    /* Fuer den vom Benutzer gedrueckten Knopf im Formular */
+
+     fsel_input(path_name,file_name,&bttn);  /* Formular eroeffnen    */
+     objc_draw(tree,0,0,0,0,0,0);  /* etwaige Clippings ausschalten   */
+     copy_pic(0);   /* restore old picture   */
+
+     return (bttn); /* In jedem Fall der Ueberroutine OK/ABBRUCH mitteilen */
+}
+
+
+/*****    closes a file and changes mouse into an arrow     *****/
+close(handle)
+  register int handle;
+{
+     Fclose(handle);
+     print_msg(seq_name,62,1,1,2);      /* print seq name   */
+     print_msg(song_name,62,11,1,3);    /* print song name  */
+     graf_mouse(0,0l);
+}
+
+
+/*****    loads a sound sequence over the old one *****/
+load_seq()
+{
+  register int handle;
+  register long len;
+
+     if (form_alert(1,"[1][Be careful!|You'll overwrite the|old seq.!][CONT|CAN\
+CEL]") == 2)
+          return;
+
+     copy_str(seq_path,path_name); /* copy path to global work array  */
+     copy_str(seq_name,file_name); /*   "    */
+
+     handle = opn_load();     /* opens the file   */
+     if (handle > 5) {   /* saving can be continued, no error    */
+          copy_str(path_name,seq_path); /* get the new path */
+          copy_str(file_name,seq_name); /*   "    */
+          Fread(handle,8l,info_field);  /* reads first the info header     */
+          speed = (char) info_field[0];
+          len = info_field[1];
+          if (len > maxbytes) {    /* loading file is too large! */
+               if (form_alert(1,"[1][File is too long!|Shall I read as much|as \
+I can?][YES|NO]") == 1)
+                    alloc(maxbytes);    /* load as much as the computer can */
+          }
+          else
+               alloc(len);
+
+          read(handle,seq_end-seq_start,seq_start);    /* read it     */
+     }
+     close(handle);
+}
+
+
+/*****    reads a file and watch the error output channel   *****/
+read(handle,len,start)
+  register int handle;
+  register long len,start;
+{
+     start = Fread(handle,len,start);   /* read it     */
+     if (start != len)
+          form_alert(1,"[1][Couldn't read the|whole data!][ACCEPTED]");
+}
+
+
+/*****    opens a file for reading *****/
+opn_load()
+{
+  register int handle;
+
+     if (!get_name())    /* displays the file selector box  */
+          return -20;    /* cancel?     */
+
+     set_path();    /* Pfad setzen */
+
+     handle = Fopen(file_name,0);  /* Datei oeffnen    */
+     if (handle < 0) {   /* Negativer Wert -> Fehler -> Meldung ausgeben   */
+          form_alert(1,"[1][Cannot read this file!][CANCEL]");
+          Fclose(handle);/* Bei Fehler die Datei wieder schliessen    */
+     }
+
+     graf_mouse(2,0l);   /* mouse is now a bee    */
+
+     return handle; /* Fehler/Handle zurueckgeben */
+}
+
+
+/*****    displays graphic for the digital sound datas *****/
+displ_graph()
+{
+  register int last_x,last_y;
+  register long work,a;
+  register char *ptr;
+  int end_x,end_y;
+  unsigned int x1,x2;
+  long nr;
+  float work1;
+
+     hide_mouse();
+
+     fill_rectangle(0,50,639,214,0,white,0);      /* clear screen     */
+     line(0,135,639,135,0,0xffff); /* first the neutral line!    */
+
+     nr = res[displ_nr];
+     last_x = 0;
+     end_y = 214;
+     ptr = (char *) seq_start+seq_pos;  /* pointer to first byte to be displ */
+     work1 = 640/nr;
+     work = 640/nr;
+
+     fill_rectangle(0,235,639,239,0,white,0);
+     if (work1 > 1)
+          for (end_x = 0; end_x < 639; end_x += work1)
+               line(end_x,235,end_x,239,0,0xffff);
+
+     for (end_x = 0, a = 0; a < 639; a += (work == 0 ? 1 : work)) {
+          last_x += work1 < 1 ? 1 : work1;
+          last_y = 214-((*ptr & 0xfc)/4)*2.5;
+
+          line(end_x,end_y,last_x,last_y,0,0xffff);    /* draw line   */
+
+          end_x = last_x;
+          end_y = last_y;
+
+          ptr += (work == 0 ? nr/640 : 1);
+          if (ptr > (char *) seq_end)
+               break;
+     }
+
+     /****     display the window on the screen!  ****/
+     x1 = x2 = 0;
+
+     if (wind_start[akt_wind] >= seq_pos && wind_start[akt_wind] <=
+         nr+seq_pos) {     /* part of window is on screen!    */
+          x1 = ((float) 640/nr)*(wind_start[akt_wind]-seq_pos);
+          x2 = 639;
+     }
+     if (wind_end[akt_wind] >= seq_pos && wind_end[akt_wind] <= nr+seq_pos)
+          x2 = ((float) 640/nr)*(wind_end[akt_wind]-seq_pos);
+     if (wind_start[akt_wind] < seq_pos && wind_end[akt_wind] > nr+seq_pos)
+          x2 = 639;
+
+     if (x1+x2 && x1 < 640 && x2 < 640)
+          fill_rectangle(x1,50,x2,214,2,black,0);      /* invers screen    */
+
+     /****     display the block on the screen!   ****/
+     x1 = x2 = 0;
+
+     if (blk_start >= seq_pos && blk_start <= nr+seq_pos) { /* on screen!  */
+          x1 = ((float) 640/nr)*(blk_start-seq_pos);
+          x2 = 639;
+     }
+     if (blk_end >= seq_pos && blk_end <= nr+seq_pos)
+          x2 = ((float) 640/nr)*(blk_end-seq_pos);
+     if (blk_start < seq_pos && blk_end > nr+seq_pos)
+          x2 = 639;
+
+     if (x1+x2 && x1 < 640 && x2 < 640)
+          fill_rectangle(x1,50,x2,214,2,cross,3);      /* invers screen    */
+
+
+     /****     grîsse der seq. und blk. anzeigen  ****/
+     ssp = 0;
+     dez_str(info_kb,(seq_end-seq_start)/1024l,4);
+     schrift = 1;
+     put_string(info_kb,42,26);
+
+     ssp = 0;
+     dez_str(info_kb,blk_len/1024l,4);
+     put_string(info_kb,42,36);
+
+     /****     abs und rel position anzeigen ****/
+     ssp = 0;
+     dez_str(info_kb,seq_pos/1024l,4);
+     put_string(info_kb,42,14);
+
+     ssp = 0;
+     dez_str(info_pos,seq_pos,8);
+     put_string(info_pos,42,4);
+
+
+     show_mouse();
+     show_pos(&x1,&x2);  /* show where you are    */
+}
+
+
+/*****    plays digital sound to ld.sp. until mouse is moved!    *****/
+play()
+{
+  register long a;
+
+     if (form_alert(1,"[1][Are you ready?| ][YES|NO]") == 2)
+          return;      /* user wants to abort   */
+
+     init_snd();
+
+     for (a = 0; a < 0x38000; a++);     /* a wait loop */
+
+     asm {
+          move.b    0xfffffa07,-(A7)    /* disable interrupts    */
+          move.b    0xfffffa09,-(A7)
+          move.b    #0x20,0xfffffa07
+          move.b    #0x40,0xfffffa09
+          andi.w    #0xf8ff,SR
+          ori.w     #0x700,SR
+
+          clr.l     D2
+          move.b    #0x20,D2
+          move.b    #14,0xffff8800
+          move.b    0xffff8800,D3
+          or.b      D2,D3
+          move.b    D3,0xffff8802
+
+          move.b    #7,0xffff8800
+          move.b    0xffff8800,D0
+          and.b     #0x7f,D0
+          move.b    D0,0xffff8802
+
+          lea       poketab(A4),A1      /* adress of volume values    */
+
+          move.b    #1,0xfffffa19       /* start timer a for countdown */
+          move.b    0xfffa01,D6         /* keybrd and mouse status    */
+
+
+          /*****    here we go...  *****/
+
+inloop:
+          clr.l     D5
+          move.b    #15,0xffff8800      /* reg. 15 selected */
+          move.b    0xffff8800,D5       /* get sound values from port b    */
+
+          move.b    #14,0xffff8800      /* strobe low output     */
+          move.b    0xffff8800,D1
+          and.b     #0xdf,D1
+          move.b    D1,0xffff8802
+          move.b    0xffff8800,D1       /* strobe high output    */
+          or.b      #0x20,D1
+          move.b    D1,0xffff8802
+
+          /*****    output sound to monitor  *****/
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+
+          move.b    D6,D7
+          move.b    0xfffa01,D6         /* test the keybrd status     */
+          cmp.b     D6,D7
+          beq.s     inloop
+
+          move.b    (A7)+,0xfffffa09
+          move.b    (A7)+,0xfffffa07
+          move.w    #0x2308,SR
+     }
+
+     reinit_snd();
+}
+
+
+/*****    move graphic position forward *****/
+forwrd(len)
+  register long len;
+{
+     seq_pos += len;
+     while (seq_start+seq_pos > seq_end)
+          seq_pos -= res[displ_nr];
+}
+
+
+/*****    move graphic position backward *****/
+backwrd(len)
+  register long len;
+{
+     seq_pos -= len;
+     while (seq_pos < 0) {
+          Cconws(gong);
+          seq_pos = 0;
+     }
+}
+
+
+/*****    prints a string into hires in fastest speed (x-cord. is column!) ****/
+put_string(str,x,y)
+  char *str;
+  int x,y;
+{
+  register int schrift2;
+
+       asm {
+
+          movem.l   A2-A3,-(A7)    /* Register sichern */
+
+     nonaktiv:
+           move.w schrift(A4),schrift2
+           cmpi.w #1,schrift2      /* Kleine Schrift 8x8 Pixel?  */
+           beq lq3
+           move.l fhbase(A4),A3    /* Adresse des grossen Zeichensatzes    */
+           bra lq4
+     lq3:  move.l fmbase(A4),A3    /* Adresse des kleinen Zeichensatzes    */
+     lq4:  move.l str(A6)   ,A2    /* Zeiger auf Text in A2 */
+           clr.l  D0
+           clr.l  D1
+            move.w y(A6),D0        /* Bildschirm-y-Koordinate 0-399 in D0  */
+            move.w x(A6),D1        /* Spalte 0-79 in D1     */
+           mulu.w #80,D0           /* Aus y-Koord. Hiresadresse errechnen  */
+           add.l  D1,D0            /* Spalte zu Hireszeilenstart, sowie    */
+           add.l  sbase(A4),D0     /* die Bildschirmbasisadresse addieren  */
+           move.l D0,A0
+     hsl3: clr.l  D0
+           move.b (A2)+,D0         /* Zeichen aus String holen   */
+           beq hsoend              /* Stringende, dann Ausgabe abbrechen   */
+           add.l  A3,D0            /* Ansonsten das Zeichen durch Kopieren */
+           move.l D0,A1            /* aus den Zeichensatz ausgeben    */
+           move.b (A1),(A0)             /* 1. Bytereihe     */
+           move.b 0x100(A1),80(A0)      /* 2. Bytesreihe... */
+           move.b 0x200(A1),160(A0)
+           move.b 0x300(A1),240(A0)
+           move.b 0x400(A1),320(A0)
+           move.b 0x500(A1),400(A0)
+           move.b 0x600(A1),480(A0)
+           move.b 0x700(A1),560(A0)
+           cmpi.w #1,schrift2      /* 16x8-Schrift, dann nochmal 8 Zeichen- */
+           beq lq5                 /* zeilen ausgeben  */
+           move.b 0x800(A1),640(A0)
+           move.b 0x900(A1),720(A0)
+           move.b 0xa00(A1),800(A0)
+           move.b 0xb00(A1),880(A0)
+           move.b 0xc00(A1),960(A0)
+           move.b 0xd00(A1),1040(A0)
+           move.b 0xe00(A1),1120(A0)
+           move.b 0xf00(A1),1200(A0)
+
+     lq5:  addq.l  #1,A0      /* Bildschirmposition um ein  */
+           bra     hsl3       /* Zeichen weitergehen   */
+     hsoend:
+
+          movem.l   (A7)+,A2-A3    /* Register zurueckholen */
+
+       }
+}
+
+
+/*****    prints a message    *****/
+print_msg(str,x,y,font,where)
+  register char *str;
+  register int x,y,font,where;
+{
+     schrift = font;     /* kind of font     */
+     copy_pic(0);   /* restore old picture   */
+     hide_mouse();
+     if (where == 1)
+          fill_rectangle(0,216,639,232,0,white,0);      /* clear screen     */
+     if (where == 2)
+          fill_rectangle(496,1,639,10,0,white,0);
+     if (where == 3)
+          fill_rectangle(496,11,639,18,0,white,0);
+     put_string(str,x,y);
+     copy_pic(1);   /* save new picture */
+     show_mouse();
+}
+
+
+
+/*****    clears a block *****/
+clr_blk(from,to)
+  char *from,*to;
+{
+  register char *ptr;
+
+     for (ptr = from; ptr <= to; ptr++)
+          *ptr = 0;
+}
+
+
+/*****    loads a sound block/window over the old one *****/
+load_blk(from,to,ptr_speed,len_ptr)
+  register long from,to;
+  char *ptr_speed;
+  long *len_ptr;
+{
+  register int handle;
+  register long len;
+
+     copy_str(seq_path,path_name); /* copy path to global work array  */
+     copy_str(seq_name,file_name); /*   "    */
+
+     handle = opn_load();     /* opens the file   */
+     if (handle > 5) {   /* saving can be continued, no error    */
+          Fread(handle,8l,info_field);  /* reads first the info header     */
+          *ptr_speed = (char) info_field[0];
+          len = info_field[1];
+          if (len > to-from) {     /* loading file is too large! */
+               form_alert(1,"[1][File is too long!| ][OK]");
+               len = to-from;
+          }
+          read(handle,len,from);
+     }
+     close(handle);
+     *len_ptr = len;
+}
+
+
+/*****    increase or decrease window number *****/
+chng_wndnr(add)
+  register int add;
+{
+     akt_wind += add;
+     if (akt_wind < 0) {
+          akt_wind = 0;
+          Cconws(gong);
+     }
+     if (akt_wind >= WINDMAX) {
+          akt_wind = WINDMAX-1;
+          Cconws(gong);
+     }
+
+     ssp = 0;
+     dez_str(wndnr,(long) akt_wind,3);
+     print_msg(wndnr,16,380,2,0);
+
+     chng_defwnd();
+}
+
+
+/*****    get  adress of normal textstring   *****/
+get_txtstr(index,point)
+  long *point;
+  register int index;
+{
+  register int *i;
+  register long *ptr;
+
+     i = tree+(index*12)+6;   /* zeigt auf Objc_Spezifikation */
+     ptr = (long *) i;
+     *point = *ptr;      /* aus Spez. den Pointer auf Tedinfo */
+}
+
+
+/*****    set all variables for block/wnd definition   *****/
+set_def(pos,other,kind,kindblk,str)
+  register char *str;
+  register int kind,kindblk;
+  register long pos,other;
+{
+     def_pos = (long *) pos;
+     other_pos = (long *) other;
+     def_kind = kind;
+     kind_blk = kindblk;
+     print_msg(str,8,216,2,1);
+}
+
+
+/*****    changes window to be defined  *****/
+chng_defwnd()
+{
+     if (!kind_blk)      /* only if defining a window  */
+          if (!def_kind)
+               set2_def();
+          else
+               set3_def();
+}
+
+set2_def()
+{
+     set_def(&wind_start[akt_wind],&wind_end[akt_wind],0,0,"Define Window Start\
+");
+}
+
+set3_def()
+{
+     set_def(&wind_end[akt_wind],&wind_start[akt_wind],1,0,"Define Window End");
+}
+
+
+/*****    graf_movebox used to slide a box within the whole seq. *****/
+sliding()
+{
+  int x,y;
+  int width,xk,ret;
+  register long len;
+
+     len = seq_end-seq_start;
+
+     if (!show_pos(&width,&xk))    /* failure     */
+          return;
+
+     hide_mouse();
+     fill_rectangle(0,242,639,261,2,black,0);
+     show_mouse();
+
+     evnt_button(1,1,1, &x,&y,&ret,&ret);
+     /* Seite vor/zurueck, wenn Maus rechts/links des Ausschnittes steht   */
+     if (y >= 242 && y <= 261)
+          if (x < xk)    /* Seite hoch  */
+               backwrd(res[displ_nr]);
+          else if (x > xk+width)
+               forwrd(res[displ_nr]);
+          else {
+               graf_dragbox(width,261-242,xk,242, 0,242,640,261-242, &x,&ret);
+               if (xk != x)
+                    seq_pos = ((long) x*len)/640l;
+          }
+}
+
+
+/*****    shows in a graphic box where you are in seq. *****/
+show_pos(width,xk)
+  int *width,*xk;
+{
+  register int x,width2,xk2;
+  register long len;
+
+     len = seq_end-seq_start;
+
+     if (res[displ_nr] == len) {   /* all bytes displayed on screen */
+          hide_mouse();
+          fill_rectangle(0,242,639,261,0,muster,1);
+          show_mouse();
+          return 0; /* failure     */
+     }
+
+     width2 = (res[displ_nr]*640l)/len;
+     if (width2 < 3)
+          width2 = 3;
+     xk2 = (seq_pos*640l)/len;
+
+     if (!xk2)
+          x = 0;
+     else
+          x = xk2-1;
+
+     if (width2+xk2 > 639)    /* Textgrafik darf nicht die Pixelzeile ueber- */
+          width2 = 639-xk2;   /* steigen     */
+
+
+     hide_mouse();
+     fill_rectangle(0,242,639,261,0,muster,1);
+     fill_rectangle(xk2,242,xk2+width2-1,261,0,white,0);
+     line(x,242,x,261,0,0xffff);
+     line(xk2+width2,242,xk2+width2,261,0,0xffff);
+     show_mouse();
+
+     *xk = xk2;
+     *width = width2;    /* hîherer routine Åbergeben  */
+}
+
+
+/*****    displays directory on screen  *****/
+dir()
+{
+  register int xa,ys,i;
+  register long j;
+
+  struct DTA {
+    char  system[21];
+    char  attr;
+    long  date;
+    unsigned int   h_length;
+    unsigned int   l_length;
+    char  name[14];
+  }   dta;
+
+  struct FREE {
+     long free_units;
+     long total_units;
+     long bps;
+     long spu;
+  } free;
+
+
+     hide_mouse();       /* Maus abschalten */
+
+     schrift = 2;
+     ys = 66;  /* start y     */
+
+     Fsetdta(&dta); /* set Dta     */
+     fill_rectangle(0,50,639,214,0,white,0);      /* clear screen     */
+     show_mouse();
+
+     if (Dfree(&free,0) < 0) {     /* Get Free Disk Space */
+          form_alert(1,"[1][Can't read DIR!|How about insert a disk?][CANCEL]");
+          return;   /* Fehler > Abbruch */
+     }
+
+     hide_mouse();
+     ssp = 12;
+     j = free.free_units * free.bps * free.spu;
+     dez_str(info1,j,7);
+     ssp = 12;
+     dez_str(info2,(free.total_units * free.bps * free.spu)-j,7);
+
+     put_string(info1,10,ys);           /* free Bytes ausgeben */
+     put_string(info2,10,ys+16);        /* used Bytes ausgeben */
+
+     if (Fsfirst("*.*",0x37) < 0)
+          goto exit_1;
+
+     xa = 10;
+     ys += 3*16;
+
+     do {      /* Schleife zum Ausgeben */
+          put_string(dta.name,xa,ys);
+
+               ssp = 0;
+               j = ((long) dta.h_length)*65536 + dta.l_length;
+               dez_str(info3,j,6);
+               put_string(info3,xa+15,ys);
+
+          switch (dta.attr) {
+
+               case 0x01:     /* only to write */
+                    put_string("NO_WRT",xa+25,ys);
+                    break;
+
+               case 0x02:     /* Verborgen */
+                    put_string("HIDDEN",xa+25,ys);
+                    break;
+
+               case 0x04:     /* Verborgener Sys-Eintrag */
+                    put_string("SYSTEM",xa+25,ys);
+                    break;
+
+               case 0x10:     /* Subdir */
+                    put_string("SUB",xa+25,ys);
+                    break;
+
+               default:       /* normal lesen/schreiben */
+                    put_string("R/W",xa+25,ys);
+          }
+
+          ys += 16;
+          if (ys >= 210) {
+               ys = 66;
+
+               if (xa == 45) {
+                    wait_click();  /* wait for click   */
+                    fill_rectangle(0,66,639,214,0,white,0);
+                    xa = 10;
+               }
+               else
+                    xa = 45;
+           }
+
+     } while (!Fsnext());
+
+exit_1:
+     wait_click();
+     show_mouse();  /* Maus wieder einschalten */
+}
+
+
+/*****    formats a new disk  *****/
+format()
+{
+  register int track,i;
+
+     if (form_alert(0,"[1][Insert a double sided disk|in drive A:][FORMAT|CANCE\
+L]") == 2)
+          return;
+
+     hide_mouse();
+     fill_rectangle(0,50,639,214,0,white,0);      /* clear screen     */
+     schrift = 2;
+
+     for (track = 0; track <= 82; track++) {
+          ssp = 17;
+          dez_str(info_fmt,(long) track,2);
+          put_string(info_fmt,24,130);
+
+          if (Flopfmt(fmtpuffer,0l,0,10,track,0,1,0x87654321,0l) < 0) {
+               fmt_err();
+               break;
+          }
+          if (Flopfmt(fmtpuffer,0l,0,10,track,1,1,0x87654321,0l) < 0) {
+               fmt_err();
+               break;
+          }
+     }
+     for (i = 0; i < 512; *(fmtpuffer + i++) = 0);
+          Protobt(fmtpuffer,0x01111111l,3,0);
+          *(fmtpuffer+0x13) = 1660 & 0xff;
+          *(fmtpuffer+0x14) = (1660 >> 8) & 0xff;
+          *(fmtpuffer+0x18) = 10;
+          Flopwr(fmtpuffer,0x0000l,0,1,0,0,1);
+
+     for (i = 0; i < 512; *(fmtpuffer + i++) = 0);
+          *(fmtpuffer) = 0xf7;
+          *(fmtpuffer+1) = 0xff;
+          *(fmtpuffer+2) = 0xff;
+          Flopwr(fmtpuffer,0x0000l,0,7,0,0,1);
+          Flopwr(fmtpuffer,0x0000l,0,2,0,0,1);
+
+     show_mouse();
+}
+
+
+/*****    tells user there's an error on disk     *****/
+fmt_err()
+{
+     show_mouse();
+     form_alert(1,"[1][DISK ERROR!|Check it and try again!][OK]");
+     hide_mouse();
+}
+
+
+/*****    copies a block into another   *****/
+copy(start,end,to,to_len,len_ptr)
+  register char *start,*to;
+  long *len_ptr;
+  register long end,to_len;
+{
+  register long len;
+
+     if (end- (long) start > to_len)
+          if (form_alert(1,"[1][Destination is too short|Shall I copy as much|a\
+s I can?][YES|NO]") == 2) {
+               *len_ptr = 0l;
+               return;
+          }
+          else
+               end = (long) start+to_len;
+
+     len = end-(long) start;
+     for ( ; start < (char *) end; start++,to++)
+          *to = *start;
+
+     *len_ptr = len;
+}
+
+
+/*****    awaits a mouse click (with notice for that being displayed) *****/
+wait_click()
+{
+  register int dup;
+
+     fill_rectangle(0,242,639,261,0,black,0);
+     dup = schrift;
+     schrift = 2;
+     put_string("[ Left Mouse Button ]",30,244);
+     schrift = dup;
+     evnt_button(1,1,1,&mouse_x,&mouse_y,&ret,&ret);   /* Button event ready */
+     fill_rectangle(0,242,639,261,0,black,0);
+}
+
+
+/*****    user can program a song  *****/
+make_song()
+{
+  static int wind_pos = 0;    /* start bei window #0   */
+  register int a,b,c,work;
+  int counter;
+  char *ptr;
+  int x,y,w,h,index;
+
+     counter = 0;
+
+weiter:
+     rsrc_gaddr(0,MAKESONG,&tree);      /* gets start adr. of tree    */
+     for (b = 0,a = wind_pos; a < wind_pos+10 && a < SONGMAX; a++,b++) {
+          get_txtstr(name_list[b],&ptr);
+          ssp = 0;
+          dez_str(ptr,(long) a,3);
+
+          get_ptext(wnd_list[b],&ptr);
+          ssp = 0;
+          dez_str(ptr,(long) sng[a].wind_nr,3);
+
+          get_ptext(rpt_list[b],&ptr);
+          if (!sng[a].repeat)
+               *ptr = 0;
+          else {
+               ssp = 0;
+               dez_str(ptr,(long) sng[a].repeat,3);
+          }
+
+          state(dir_list[b]+sng[a].dir) = SELECT;
+          state(dir_list[b]-1-sng[a].dir) = NORMAL;
+     }
+
+
+     if (!counter) {
+          form_center (tree, &x,&y,&w,&h);   /* centers the formula   */
+          form_dial (0, x,y,w,h, x,y,w,h);   /* reserve screen memory */
+          form_dial (2, x,y,w,h, 0,0,639,399);
+     }
+     objc_draw (tree,0,4, x,y,w,h);     /* prints the formula    */
+     index = form_do (tree,WINDOW1);
+     state(index) = NORMAL;
+     counter++;
+
+     for (b = 0,a = wind_pos; a < wind_pos+10 && a < SONGMAX; a++,b++) {
+          sng[a].wind_nr = get_numeric(wnd_list[b]);
+          sng[a].repeat = get_numeric(rpt_list[b]);
+          if (state(dir_list[b]) == SELECT)
+               sng[a].dir = 0;
+          else
+               sng[a].dir = -1;
+     }
+
+     switch(index) {     /* Buttons abchecken     */
+          case PLAYSEQ:
+               if (formula(PLAYBOX,0) == PLAYOK) {
+                    a = get_numeric(PLAYEDIT);
+                    if (a < SONGMAX) {
+                         prep_snd();
+                         play2_sng(&sng[a]);
+                         unprep_snd();
+                    }
+               }
+               goto weiter;
+
+          case DELETE:
+               if (formula(DELBOX,DELFROM) == DELOK) {
+                    a = get_numeric(DELFROM);
+                    b = get_numeric(DELLEN);
+                    if (a < SONGMAX-1) {
+                         for (work = a+b; work < SONGMAX; work++)
+                              sng[work-b] = sng[work];
+                         clr_sngfield(SONGMAX-b,b);
+                         counter = 0;
+                    }
+               }
+               goto weiter;
+
+          case COPY:
+               if (formula(COPYBOX,COPYFROM) == COPYOK) {
+                    a = get_numeric(COPYFROM);
+                    b = get_numeric(COPYLEN);
+                    c = get_numeric(COPYTO);
+                    if (a < SONGMAX && c < SONGMAX) {
+                         for (work=a; work < SONGMAX && work < a+b; work++,c++)
+                              if (c < SONGMAX)
+                                   sng[c] = sng[work];
+                         counter = 0;
+                    }
+               }
+               goto weiter;
+
+          case INSERT:
+               if (formula(SGINS,EDITFROM) == INSOK) {
+                    a = get_numeric(EDITFROM);
+                    b = get_numeric(EDITNR);
+                    if (a < SONGMAX-1 && b) {
+                         for (work = SONGMAX-1; work >= a; work--)
+                              if (work+b < SONGMAX)
+                                   sng[work+b] = sng[work];
+                         clr_sngfield(a,b);
+                         counter = 0;
+                    }
+               }
+               goto weiter;
+
+          case MAKEGOTO:
+               if (formula(SEQGOTO,EDITGOTO) == SGOK) {
+                    wind_pos = get_numeric(EDITGOTO);
+                    if (wind_pos > SONGMAX-10)
+                         wind_pos = SONGMAX-10;
+                    counter = 0;
+               }
+               goto weiter;
+
+          case MAKEUP:
+               if (wind_pos >= 10)
+                    wind_pos -= 10;
+               else
+                    wind_pos = 0;
+               goto weiter;
+
+          case MAKEDWN:
+               if (wind_pos <= SONGMAX-20)
+                    wind_pos += 10;
+               else
+                    wind_pos = SONGMAX-10;
+               goto weiter;
+     }
+
+     for (a = 0; a < 10; a++) /* check for pressed edit btns     */
+          if (edit_list[a] == index) {
+               edit_attr(wind_pos+a);
+               goto weiter;
+          }
+
+     form_dial (1, x,y,w,h, 0,19,639,399);
+     form_dial (3, x,y,w,h, x,y,w,h);
+     objc_draw (tree,0,0, 0,0,0,0);
+}
+
+
+/*****    edit attributs for song seq   *****/
+edit_attr(nr)
+  register int nr; /* nr of song seq.  */
+{
+  register int a,index;
+  char *str;
+
+next:
+     rsrc_gaddr(0,EDITATTR,&tree);      /* gets start adr. of tree    */
+     get_txtstr(SEQNR,&str);
+     ssp = 26;
+     dez_str(str,(long) nr,3);     /* number of song seq. will be edited */
+
+     prepare_bttn(NOEFFECT,5,(int) sng[nr].attr);
+     if (sng[nr].attr == 4) { /* volume-attr.     */
+          prepare_bttn(FULLVOL,6,(int) sng[nr].echo);
+          prepare_bttn(ECHOFAST,3,0);
+     }
+     else {
+          prepare_bttn(ECHOFAST,3,(int) sng[nr].echo);
+          prepare_bttn(FULLVOL,6,0);
+     }
+
+     get_txtstr(SPDTXT,&str);
+     ssp = 8;
+     dez_str(str,(long) sng[nr].spd+1,2);
+
+     get_txtstr(LENTXT,&str);
+     if (sng[nr].len == 16)   /* whole window     */
+          copy_str(whole,str+8);
+     else {
+          ssp = 8;
+          dez_str(str,attrlen[sng[nr].len],5);
+     }
+
+     get_ptext(ATTRLOOP,&str);
+     if (!sng[nr].loops)
+          *str = 0;
+     else {
+          ssp = 0;
+          dez_str(str,(long) sng[nr].loops,3);
+     }
+
+next2:
+     index = formula(EDITATTR,ATTRLOOP);
+
+     sng[nr].attr = (char) get_select(NOEFFECT,4);
+     if (sng[nr].attr == 4)   /* volume-attr.     */
+          sng[nr].echo = (char) get_select(FULLVOL,6);
+     else
+          sng[nr].echo = (char) get_select(ECHOFAST,3);
+
+     sng[nr].loops = get_numeric(ATTRLOOP);
+     if (!sng[nr].loops)
+          sng[nr].loops = 1;
+
+     switch(index) {
+          case SNGADJST:
+               sng[nr].spd = wind_speed[akt_wind];
+               get_txtstr(SPDTXT,&str);
+               ssp = 8;
+               dez_str(str,(long) sng[nr].spd+1,2);
+               goto next2;
+          case ATTRSPD:    /* edit the speed of seq.     */
+               rsrc_gaddr(0,EDITSPD,&tree);      /* gets start adr. of tree  */
+               prepare_bttn(SPD,30,(int) sng[nr].spd);
+               if (formula(EDITSPD,0) == SPDOK)
+                    sng[nr].spd = (char) get_select(SPD,30);
+               goto next;
+          case ATTRLEN:    /* edit the speed of seq.     */
+               rsrc_gaddr(0,EDITLEN,&tree);      /* gets start adr. of tree */
+               prepare_bttn(LEN,30,(int) sng[nr].len);
+               if (formula(EDITLEN,0) == LENOK)
+                    sng[nr].len = (char) get_select(LEN,30);
+               goto next;
+     }
+}
+
+
+/*****    clears song seq. field   *****/
+clr_sngfield(start,len)
+  register int start,len;
+{
+  register int a;
+
+     for (a = start; a < start+len; a++)
+          if (a < SONGMAX) {
+               sng[a].wind_nr = 0;
+               sng[a].repeat = 0;
+               sng[a].dir = -1;    /* forward     */
+               sng[a].attr = 0;
+               sng[a].spd = speed;
+               sng[a].len = 6;
+               sng[a].loops = 1;
+               sng[a].echo = 1;    /* medium */
+          }
+}
+
+
+/***** saves a song (its name is obligatory)     *****/
+save_sng()
+{
+  register int a;
+  register int handle;
+
+     copy_str(song_path,path_name);      /* copy path to global work array  */
+     copy_str(song_name,file_name);      /*   "    */
+
+     handle = opn_save();     /* opens the file   */
+     if (handle > 5) {   /* saving can be continued, no error    */
+          graf_mouse(2,0l);
+          info_field[0] = 0;
+          Fwrite(handle,4l,info_field);
+          write(handle,(long) sizeof(sng),&sng[0]);
+          for (a = 0; a < WINDMAX; a++) {
+               Fwrite(handle,1l,&wind_speed[a]);
+               Fwrite(handle,4l,&wind_start[a]);
+               Fwrite(handle,4l,&wind_end[a]);
+          }
+
+          info_field[0] = (long) speed;
+          info_field[1] = seq_end-seq_start;
+          Fwrite(handle,8l,info_field); /* write first the info header */
+          write(handle,seq_end-seq_start,seq_start);
+     }
+     close(handle);
+}
+
+
+/*****    loads a song over the old one *****/
+load_sng()
+{
+  register int a;
+  register int handle;
+  register long len;
+
+     if (form_alert(1,"[1][Be careful!|You'll overwrite the|old song!][CONT|CAN\
+CEL]") == 2)
+          return;
+
+     copy_str(song_path,path_name); /* copy path to global work array  */
+     copy_str(song_name,file_name); /*   "    */
+
+     handle = opn_load();     /* opens the file   */
+     if (handle > 5) {   /* saving can be continued, no error    */
+          graf_mouse(2,0l);
+          Fread(handle,4l,&info_field);
+          read(handle,(long) sizeof(sng),&sng[0]);
+          for (a = 0; a < WINDMAX; a++) {
+               Fread(handle,1l,&wind_speed[a]);
+               Fread(handle,4l,&wind_start[a]);
+               Fread(handle,4l,&wind_end[a]);
+          }
+          copy_str(path_name,song_path); /* get the new path */
+          copy_str(file_name,song_name); /*   "    */
+
+          Fread(handle,8l,info_field);  /* reads first the info header */
+          speed = (char) info_field[0];
+          len = info_field[1];
+          if (len > maxbytes) {    /* loading file is too large! */
+               if (form_alert(1,"[1][File is too long!|Shall I read as much|as \
+I can?][YES|NO]") == 1)
+                    alloc(maxbytes);
+          }
+          else
+               alloc(len);
+
+          graf_mouse(2,0l);
+          read(handle,seq_end-seq_start,seq_start);    /* read it     */
+     }
+     close(handle);
+}
+
+
+/***** plays the song    *****/
+play_sng()
+{
+  register int a;
+
+     prep_snd();
+     for (a = 0; a < SONGMAX; a++)
+          play2_sng(&sng[a]);
+     unprep_snd();
+}
+
+
+play2_sng(data)
+  register long data;
+{
+  long len;
+  int loop,cnt,echo;
+
+  static char echonr[] = {3,7,                /* start 0     */
+                          2,4,5,7,            /* start 2     */
+                          1,2,3,4,5,7    };   /* start 6     */
+  static char volnr[] = {0,1,2,3,5,7};
+
+     asm {
+          movem.l   D0-A6,-(A7)
+
+          /*   A2: start of window
+               A3:  end of window
+
+               D5:  attr
+               D6:  direction
+               D7:  repeat
+          */
+
+          clr.l     D3
+          clr.l     D4
+
+          movea.l   data,A0
+          move.w    2(A0),D7       /* number of repeats     */
+          beq       back
+
+          move.w    (A0),D0        /* window number    */
+          lsl.w     #2,D0          /* x4     */
+          lea       wind_start(A4),A1
+          move.l    0(A1,D0),A2
+          adda.l    seq_start(A4),A2    /* -> start of window    */
+          lea       wind_end(A4),A1
+          movea.l   0(A1,D0),A3
+          adda.l    seq_start(A4),A3    /* -> end of window */
+          
+          move.b    4(A0),D6       /* direction   */
+          move.b    5(A0),D5       /* attributes  */
+          beq.s     use_wndspd     /* no effect -> use setted speed   */
+          move.b    6(A0),D4       /* spd pointer */
+use_newspd:
+          lea       timer_data(A4),A1
+          lsl.b     #1,D4          /* x2     */
+          move.b    1(A1,D4),0xfffffa1f      /* Ti A data register    */
+          bra.s     goto1
+use_wndspd:
+          lsr.w     #2,D0
+          lea       wind_speed(A4),A1
+          move.b    0(A1,D0),D4
+          bra.s     use_newspd
+goto1:
+          move.b    7(A0),D3       /* len pointer */
+          cmpi.b    #16,D3         /* 16 - whole window!    */
+          bne.s     get_len
+          move.l    A3,D3
+          sub.l     A2,D3
+          move.l    D3,len(A6)
+          bra.s     goto1a
+get_len:
+          lea       attrlen(A4),A1
+          lsl.b     #2,D3          /* x4     */
+          move.l    0(A1,D3),len(A6)    /* length of effect play window    */
+goto1a:
+          move.w    8(A0),loop(A6) /* loops  */
+
+          cmpi.b    #2,D5          /* echo -> set some variables */
+          bne.s     goto3
+          move.b    10(A0),D0      /* echo speed  0-2  */
+          cmpi.b    #0,D0
+          bne.s     nofast
+          move.w    #0,echo(A6)
+          bra.s     goto3
+nofast:
+          cmpi.b    #1,D0
+          bne.s     nomed
+          move.w    #2,echo(A6)
+          bra.s     goto3
+nomed:
+          move.w    #6,echo(A6)
+
+goto3:
+          cmpi.b    #4,D5          /* volume */
+          bne.s     goto3a
+          move.b    10(A0),echo(A6)
+
+goto3a:
+          move.l    A3,A0               /* set wnd end pointer   */
+          lea       poketab(A4),A1      /* adress of volume values    */
+          move.b    #1,0xfffffa19       /* start timer a for countdown */
+
+
+          cmpi.b    #1,D5
+          beq       hall
+          cmpi.b    #2,D5
+          beq       echoa
+          cmpi.b    #3,D5
+          beq       change
+          cmpi.b    #4,D5
+          beq       volume
+
+          move.l    A2,A0
+          move.l    A3,A5
+no_effect:
+
+          /*****    here we go...  *****/
+out1:
+          clr.l     D5
+          tst.b     D6
+          beq.s     backw1
+
+          move.b    (A2)+,D5            /* load data from memory */
+          cmpa.l    A3,A2               /* end of block?    */
+          bgt.s     end1
+
+          /*****    output sound to monitor  *****/
+sound1:
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait1:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait1
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+          bra.s     out1
+
+backw1:
+          move.b    -(A3),D5
+          cmpa.l     A2,A3
+          blt.s     end1
+          bra.s     sound1
+
+end1:
+          clr.l     D5
+          move.l    A0,A2
+          move.l    A5,A3
+          subi.w    #1,D7
+          bne       no_effect
+          bra       back
+
+
+/********************************************/
+volume:
+          move.w    D7,cnt(A6)
+          clr.w     D7
+          move.b    echo(A6),D7
+          lea       volnr(A4),A0
+          move.b    0(A0,D7.w),D7
+
+          move.l    A2,A0
+          move.l    A3,A5
+vol_again:
+
+          /*****    here we go...  *****/
+out5:
+          clr.l     D5
+          tst.b     D6
+          beq.s     backw5
+
+          move.b    (A2)+,D5            /* load data from memory */
+          cmpa.l    A3,A2               /* end of block?    */
+          bgt.s     end5
+
+          /*****    output sound to monitor  *****/
+sound5:
+          lsr.w     D7,D5
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait5:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait5
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+          bra.s     out5
+
+backw5:
+          move.b    -(A3),D5
+          cmpa.l     A2,A3
+          blt.s     end5
+          bra.s     sound5
+
+end5:
+          clr.l     D5
+          move.l    A0,A2
+          move.l    A5,A3
+
+          subi.w    #1,cnt(A6)
+          bne       vol_again
+          bra       back
+
+
+/********************************************/
+hall:
+          move.l    A2,-(A7)
+
+          /*****    here we go...  *****/
+
+loop2a:
+          move.l    A2,A5
+          move.w    loop(A6),D0         /* loops  */
+loop2:
+          move.l    A2,A3
+          adda.l    len(A6),A3         /* end of block     */
+          cmpa.l    A3,A0
+          bgt.s     out2
+          move.l    A0,A3
+
+out2:
+          clr.l     D5
+          tst.b     D6
+          beq.s     backw2
+
+          move.b    (A2)+,D5            /* load data from memory */
+          cmpa.l    A3,A2               /* end of block?    */
+          bgt.s     end2
+
+          /*****    output sound to monitor  *****/
+sound2:
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait2:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait2
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+          bra.s     out2
+
+backw2:
+          move.b    -(A3),D5
+          cmpa.l    A2,A3
+          bgt.s     sound2
+          adda.l    len(A6),A3
+
+end2:
+          move.l    A5,A2          /* play block y-times    */
+          subi.w    #1,D0
+          bne.s     loop2
+
+          cmpa.l    A0,A3
+          bgt.s     back2          /* end of window -> to next repeat */
+
+          adda.l    len(A6),A2
+          cmpa.l    A2,A0
+          bgt.s     loop2a
+
+
+back2:
+          clr.l     D5
+          move.l    (A7)+,A2
+          subi.w    #1,D7
+          bne       hall
+          bra       back
+
+/********************************************/
+echoa:    move.w    D7,cnt(A6)
+
+echo3:
+          move.l    A2,-(A7)
+
+          /*****    here we go...  *****/
+
+loop3a:
+          move.l    A2,A5
+          clr.b     D7                  /* nichts ausblenden am anfang     */
+          move.w    echo(A6),-(A7)
+          move.w    loop(A6),D0         /* loops  */
+loop3:
+          move.l    A2,A3
+          adda.l    len(A6),A3          /* end of block     */
+          cmpa.l    A3,A0
+          bgt.s     out3
+          move.l    A0,A3
+
+out3:
+          clr.l     D5
+          tst.b     D6
+          beq.s     backw3
+
+          move.b    (A2)+,D5            /* load data from memory */
+          cmpa.l    A3,A2               /* end of block?    */
+          bgt.s     end3
+
+          /*****    output sound to monitor  *****/
+sound3:
+          lsr.b     D7,D5
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait3:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait3
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+          bra.s     out3
+
+backw3:
+          move.b    -(A3),D5
+          cmpa.l    A2,A3
+          bgt.s     sound3
+          adda.l    len(A6),A3
+
+end3:
+          cmpi.b    #7,D7
+          beq.s     end3a
+          lea       echonr(A4),A2
+          clr.l     D7
+          move.w    echo(A6),D7
+          adda.l    D7,A2
+          addi.w    #1,echo(A6)
+          move.b    (A2),D7
+end3a:
+          move.l    A5,A2          /* play block y-times    */
+          subi.w    #1,D0
+          bne.s     loop3
+
+          move.w    (A7)+,echo(A6)
+          cmpa.l    A0,A3
+          bgt.s     back3          /* end of window -> to next repeat */
+
+          adda.l    len(A6),A2
+          cmpa.l    A2,A0
+          bgt       loop3a
+
+back3:
+          clr.l     D5
+          move.l    (A7)+,A2
+
+          subi.w    #1,cnt(A6)
+          bne       echo3
+          bra       back
+
+/********************************************/
+change:
+          move.l    A2,-(A7)
+
+          /*****    here we go...  *****/
+
+loop4a:
+          move.l    A2,A5
+          move.w    #-1,D6          /* forward 1st */
+          move.w    loop(A6),D0         /* loops  */
+loop4:
+          move.l    A2,A3
+          adda.l    len(A6),A3          /* end of block     */
+          cmpa.l    A3,A0
+          bgt.s     out4
+          move.l    A0,A3
+
+out4:
+          clr.l     D5
+          tst.b     D6
+          beq.s     backw4
+
+          move.b    (A2)+,D5            /* load data from memory */
+          cmpa.l    A3,A2               /* end of block?    */
+          bgt.s     end4
+
+          /*****    output sound to monitor  *****/
+sound4:
+          and.w     #0xfc,D5            /* only bit 2-7     */
+          move.w    D5,D1               /* multiplicate with 3 (2+1)  */
+          lsl.w     #1,D1
+          add.w     D1,D5
+          movem.l   0(A1,D5),D1-D3      /* load register triple */
+          movem.l   D1-D3,0xff8800      /* output sound data for listening */
+
+wait4:
+          btst      #5,0xfffffa0b       /* wait for end of countdown  */
+          beq.s     wait4
+          move.b    #0xdf,0xfffffa0b    /* reset mfp for further expepts   */
+          bra.s     out4
+
+backw4:
+          move.b    -(A3),D5
+          cmpa.l    A2,A3
+          bgt.s     sound4
+          adda.l    len(A6),A3
+
+end4:
+          tst.b     D6
+          beq.s     l4a
+          clr.w     D6
+          bra.s     l4b
+l4a:
+          move.w    #-1,D6
+l4b:
+          move.l    A5,A2          /* play block y-times    */
+          subi.w    #1,D0
+          bne.s     loop4
+
+          cmpa.l    A0,A3
+          bgt.s     back4          /* end of window -> to next repeat */
+
+          adda.l    len(A6),A2
+          cmpa.l    A2,A0
+          bgt.s     loop4a
+
+
+back4:
+          clr.l     D5
+          move.l    (A7)+,A2
+          subi.w    #1,D7
+          bne       change
+
+
+back:
+          movem.l   (A7)+,D0-A6
+     }
+}
+
+
+prep_snd()
+{
+     init_snd();
+
+     asm {
+          move.b    0xfffffa07,save1(A4)     /* disable interrupts    */
+          move.b    0xfffffa09,save2(A4)
+          move.b    #0x20,0xfffffa07
+          move.b    #0x40,0xfffffa09
+          andi.w    #0xf8ff,SR
+          ori.w     #0x700,SR
+     }
+}
+
+
+unprep_snd()
+{
+     asm {
+          move.b    save2(A4),0xfffffa09
+          move.b    save1(A4),0xfffffa07
+          move.w    #0x2308,SR
+     }
+
+     reinit_snd();
+}
+
+
+/*****    deletes a block     *****/
+del_blk(ptr_start,ptr_end,fl,w_nr)
+  int fl,w_nr; /* 0 = Window, 1 = Block */
+  register long *ptr_start,*ptr_end;
+{
+  int flag;
+  register int a;
+  register long len,start,end;
+  long dummy;
+
+     start = *ptr_start;
+     end = *ptr_end;
+     *ptr_start = 0;
+     *ptr_end = 0;
+
+     len = end-start;
+
+     copy(seq_start+end,seq_end,seq_start+start,seq_end-seq_start-end,&dummy);
+     clr_blk(seq_end-len,seq_end);
+
+     flag = 0;
+     for (a = 0; a < WINDMAX; a++) {
+          if (wind_start[a] > start && wind_start[a] < end) {
+               wind_start[a] = start;
+               if (w_nr != a)
+                    flag = 1;
+          }
+          if (wind_start[a] >= end) {
+               wind_start[a] -= len;
+               if (w_nr != a)
+                    flag = 1;
+          }
+
+          if (wind_end[a] > start && wind_end[a] < end) {
+               wind_end[a] = start;
+               if (w_nr != a)
+                    flag = 1;
+          }
+          if (wind_end[a] >= end) {
+               wind_end[a] -= len;
+               if (w_nr != a)
+                    flag = 1;
+          }
+     }
+     if (flag)
+          form_alert(1,"[1][(Some) window(s) were in the|deleted field!|Had to \
+adapt position!][ACCEPTED]");
+
+     flag = 0;
+     if (blk_start > start && blk_start < end) {
+          blk_start = start;
+          flag = 1;
+     }
+     if (blk_start >= end) {
+          blk_start -= len;
+          flag = 1;
+     }
+     if (blk_end > start && blk_end < end) {
+          blk_end = start;
+          flag = 1;
+     }
+     if (blk_end >= end) {
+          blk_end -= len;
+          flag = 1;
+     }
+
+     if (flag && !fl)
+          form_alert(1,"[1][The block was in the|deleted field!|Had to adapt hi\
+s position!][ACCEPTED]");
+}
+
+
+/*****    clears all ptext-strings *****/
+clr_ptext()
+{
+  register int a;
+  char *ptr;
+
+     a = 0;
+     while (pt_index[a] != -1) {
+          rsrc_gaddr(0,pt_index[a++],&tree);
+          get_ptext(pt_index[a++],&ptr);
+          *ptr = 0;
+     }
+}
+
+nterr« * cant cont!
+«
+ move.l« d0,akt_zeile
+«
+ move.l« contladr,akt_adr
+«
+ move.l« contadr,a0
+«
+ move.w« #-1,b_modus
+«
+ bra« runcont
+«)*
+* STOP
+«)*
+* stoppt programm
+Stop:
+«
+ bsr« charget« * auf nÑchsten befehl
+«
+ bra« stoperr
+
+
+«*
+* Call (  adr [,[[*]x],«.] )
+calltbld0:	.ds.l	8		* max. 15 d0-a6 reg. koennen/* resource set indicies for MSAMPLER */
+
+#define SETTINGS 0	/* form/dialog */
+#define SEQLEN   2	/* FTEXT in tree SETTINGS */
+#define SETOK    3	/* BUTTON in tree SETTINGS */
+#define DATA     7	/* BUTTON in tree SETTINGS */
+#define WNDSPD   39	/* BUTTON in tree SETTINGS */
+#define EDITWSPD 40	/* BUTTON in tree SETTINGS */
+#define WNDADJST 41	/* BUTTON in tree SETTINGS */
+#define WNDSADJT 42	/* BUTTON in tree SETTINGS */
+#define RES      45	/* BUTTON in tree SETTINGS */
+
+#define MAKESONG 1	/* form/dialog */
+#define NAME1    7	/* STRING in tree MAKESONG */
+#define WINDOW1  8	/* FTEXT in tree MAKESONG */
+#define REPEAT1  9	/* FTEXT in tree MAKESONG */
+#define FOR1     11	/* BUTTON in tree MAKESONG */
+#define BACK1    12	/* BUTTON in tree MAKESONG */
+#define EDIT1    13	/* BUTTON in tree MAKESONG */
+#define NAME2    14	/* STRING in tree MAKESONG */
+#define WINDOW2  15	/* FTEXT in tree MAKESONG */
+#define REPEAT2  16	/* FTEXT in tree MAKESONG */
+#define BACK2    19	/* BUTTON in tree MAKESONG */
+#define EDIT2    20	/* BUTTON in tree MAKESONG */
+#define MAKEOK   21	/* BUTTON in tree MAKESONG */
+#define NAME3    22	/* STRING in tree MAKESONG */
+#define WINDOW3  23	/* FTEXT in tree MAKESONG */
+#define REPEAT3  24	/* FTEXT in tree MAKESONG */
+#define BACK3    27	/* BUTTON in tree MAKESONG */
+#define EDIT3    28	/* BUTTON in tree MAKESONG */
+#define MAKEGOTO 29	/* BUTTON in tree MAKESONG */
+#define NAME4    30	/* STRING in tree MAKESONG */
+#define WINDOW4  31	/* FTEXT in tree MAKESONG */
+#define REPEAT4  32	/* FTEXT in tree MAKESONG */
+#define BACK4    35	/* BUTTON in tree MAKESONG */
+#define EDIT4    36	/* BUTTON in tree MAKESONG */
+#define INSERT   37	/* BUTTON in tree MAKESONG */
+#define NAME5    38	/* STRING in tree MAKESONG */
+#define WINDOW5  39	/* FTEXT in tree MAKESONG */
+#define REPEAT5  40	/* FTEXT in tree MAKESONG */
+#define BACK5    43	/* BUTTON in tree MAKESONG */
+#define EDIT5    44	/* BUTTON in tree MAKESONG */
+#define DELETE   45	/* BUTTON in tree MAKESONG */
+#define NAME6    46	/* STRING in tree MAKESONG */
+#define WINDOW6  47	/* FTEXT in tree MAKESONG */
+#define REPEAT6  48	/* FTEXT in tree MAKESONG */
+#define BACK6    51	/* BUTTON in tree MAKESONG */
+#define EDIT6    52	/* BUTTON in tree MAKESONG */
+#define COPY     53	/* BUTTON in tree MAKESONG */
+#define NAME7    54	/* STRING in tree MAKESONG */
+#define WINDOW7  55	/* FTEXT in tree MAKESONG */
+#define REPEAT7  56	/* FTEXT in tree MAKESONG */
+#define BACK7    59	/* BUTTON in tree MAKESONG */
+#define EDIT7    60	/* BUTTON in tree MAKESONG */
+#define PLAYSEQ  61	/* BUTTON in tree MAKESONG */
+#define NAME8    62	/* STRING in tree MAKESONG */
+#define WINDOW8  63	/* FTEXT in tree MAKESONG */
+#define REPEAT8  64	/* FTEXT in tree MAKESONG */
+#define BACK8    67	/* BUTTON in tree MAKESONG */
+#define EDIT8    68	/* BUTTON in tree MAKESONG */
+#define NAME9    69	/* STRING in tree MAKESONG */
+#define WINDOW9  70	/* FTEXT in tree MAKESONG */
+#define REPEAT9  71	/* FTEXT in tree MAKESONG */
+#define BACK9    74	/* BUTTON in tree MAKESONG */
+#define EDIT9    75	/* BUTTON in tree MAKESONG */
+#define MAKEUP   76	/* BOXCHAR in tree MAKESONG */
+#define NAME10   77	/* STRING in tree MAKESONG */
+#define WINDOW10 78	/* FTEXT in tree MAKESONG */
+#define REPEAT10 79	/* FTEXT in tree MAKESONG */
+#define BACK10   82	/* BUTTON in tree MAKESONG */
+#define EDIT10   83	/* BUTTON in tree MAKESONG */
+#define MAKEDWN  84	/* BOXCHAR in tree MAKESONG */
+
+#define SEQGOTO  2	/* form/dialog */
+#define EDITGOTO 1	/* FTEXT in tree SEQGOTO */
+#define SGOK     2	/* BUTTON in tree SEQGOTO */
+#define SGCANCEL 3	/* BUTTON in tree SEQGOTO */
+
+#define SGINS    3	/* form/dialog */
+#define EDITFROM 1	/* FTEXT in tree SGINS */
+#define EDITNR   2	/* FTEXT in tree SGINS */
+#define INSOK    3	/* BUTTON in tree SGINS */
+
+#define EDITSPD  4	/* form/dialog */
+#define SPDOK    1	/* BUTTON in tree EDITSPD */
+#define SPD      5	/* BUTTON in tree EDITSPD */
+
+#define EDITLEN  5	/* form/dialog */
+#define LENOK    1	/* BUTTON in tree EDITLEN */
+#define LEN      5	/* BUTTON in tree EDITLEN */
+
+#define EDITATTR 6	/* form/dialog */
+#define ATTROK   1	/* BUTTON in tree EDITATTR */
+#define SEQNR    2	/* STRING in tree EDITATTR */
+#define NOEFFECT 4	/* BUTTON in tree EDITATTR */
+#define HALL     5	/* BUTTON in tree EDITATTR */
+#define ECHO     6	/* BUTTON in tree EDITATTR */
+#define CHANGE   7	/* BUTTON in tree EDITATTR */
+#define ATTRLOOP 12	/* FTEXT in tree EDITATTR */
+#define LENTXT   13	/* STRING in tree EDITATTR */
+#define ATTRLEN  14	/* BUTTON in tree EDITATTR */
+#define SPDTXT   16	/* STRING in tree EDITATTR */
+#define ATTRSPD  17	/* BUTTON in tree EDITATTR */
+#define SNGADJST 18	/* BUTTON in tree EDITATTR */
+#define ECHOFAST 21	/* BUTTON in tree EDITATTR */
+#define FULLVOL  29	/* BUTTON in tree EDITATTR */
+
+#define COPYBOX  7	/* form/dialog */
+#define COPYFROM 4	/* FTEXT in tree COPYBOX */
+#define COPYLEN  5	/* FTEXT in tree COPYBOX */
+#define COPYTO   6	/* FTEXT in tree COPYBOX */
+#define COPYOK   7	/* BUTTON in tree COPYBOX */
+
+#define DELBOX   8	/* form/dialog */
+#define DELFROM  1	/* FTEXT in tree DELBOX */
+#define DELLEN   2	/* FTEXT in tree DELBOX */
+#define DELOK    3	/* BUTTON in tree DELBOX */
+
+#define PLAYBOX  9	/* form/dialog */
+#define PLAYEDIT 1	/* FTEXT in tree PLAYBOX */
+#define PLAYOK   2	/* BUTTON in tree PLAYBOX */
+
+#define WNDGOTO  10	/* form/dialog */
+#define EDITGO   1	/* FTEXT in tree WNDGOTO */
+#define GOOK     2	/* BUTTON in tree WNDGOTO */
+
+#define MOREINFO 11	/* form/dialog */
+
