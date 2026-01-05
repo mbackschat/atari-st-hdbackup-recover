@@ -13,6 +13,7 @@ Binary files:
 - Exectuables (PRG/TOS/TTP/ACC/APP, GEMDOS .O) – see @filetypes/601A.md
 - .O / .LIB (Turbo-C) - see @filetypes/4EFA-Turbo-C-Objects.md
 - Devpac .O – see @filetypes/FF65-Devpac-Objects.md
+- .ART (monochrome bitmap 640x400, size-based detection) - exactly 32000 bytes, no header
 
 
 Text Files:

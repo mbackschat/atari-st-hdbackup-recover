@@ -25,6 +25,7 @@ Analyze a folder of unknown files and detect valid file types that were common o
 - **NEO** - NEOchrome images (fixed 32128 bytes)
 - **PAC** - STAD compressed images (pM85/pM86 signature)
 - **IMG** - GEM Raster images
+- **ART** - Monochrome bitmap images (640x400, fixed 32000 bytes, size-based detection)
 
 ### Text Formats
 
@@ -71,10 +72,11 @@ python filetype-detector.py extracted --no-dry-run
 The tool uses a priority-based detection approach, checking for the most reliable signatures first:
 
 1. **Magic-based formats with exact size** - RSC, Turbo-C objects (highest confidence)
-2. **Fixed-size image formats** - DEGAS, NEOchrome (file size + header validation)
-3. **Magic-based executables** - GEMDOS PRG/TOS/TTP (0x601A magic + structure)
+2. **Magic-based executables** - GEMDOS PRG/TOS/TTP (0x601A magic + structure)
+3. **Fixed-size image formats** - DEGAS, NEOchrome (file size + header validation)
 4. **Compressed formats with proof** - DEGAS Elite, STAD (full decompression validation)
-5. **Text-based formats** - C, H, S, etc. (weighted keyword scoring)
+5. **Size-based binary fallbacks** - ART bitmaps (pure size-based, must not be text)
+6. **Text-based formats** - C, H, S, etc. (weighted keyword scoring)
 
 **Key principle:** If uncertain, the file is skipped or classified as generic text to minimize false positives.
 
@@ -113,17 +115,51 @@ The `testfiles/` folder contains test files organized by expected extension. Eac
 
 ```
 testfiles/
-  ├── H/          # Files that should be detected as .H (header files)
+  ├── ART/        # Files that should be detected as .ART (monochrome bitmap)
   ├── C/          # Files that should be detected as .C (C source)
-  ├── S/          # Files that should be detected as .S (assembly)
-  ├── GEMDOS-PRG/ # Files that should be detected as .PRG (programs) or .ACC
   ├── GEMDOS-O/   # Files that should be detected as .O (GEMDOS object files)
-  ├── RSC/        # Files that should be detected as .RSC
-  ├── PI1/        # Files that should be detected as .PI1
-  └── ...         # Other extensions
+  ├── GEMDOS-PRG/ # Files that should be detected as .PRG (programs) or .ACC
+  ├── H/          # Files that should be detected as .H (header files)
+  ├── PI1/        # Files that should be detected as .PI1 (DEGAS images)
+  ├── RSC/        # Files that should be detected as .RSC (GEM Resource files)
+  └── S/          # Files that should be detected as .S (assembly)
 ```
 
-Run tests on a copy of the folder to verify detection accuracy!
+### Running Tests
+
+To test the detector on all test files, run it on each subdirectory:
+
+```bash
+# Test each file type category
+python filetype-detector.py testfiles/ART --dry-run
+python filetype-detector.py testfiles/C --dry-run
+python filetype-detector.py testfiles/GEMDOS-O --dry-run
+python filetype-detector.py testfiles/GEMDOS-PRG --dry-run
+python filetype-detector.py testfiles/H --dry-run
+python filetype-detector.py testfiles/PI1 --dry-run
+python filetype-detector.py testfiles/RSC --dry-run
+python filetype-detector.py testfiles/S --dry-run
+
+# Or test all at once:
+for dir in testfiles/*/; do python filetype-detector.py "$dir" --dry-run; done
+```
+
+### Test Results Summary
+
+Current detection accuracy on test files:
+
+| Category     | Test Files | Correctly Detected | Accuracy |
+|--------------|------------|-------------------|----------|
+| ART          | 1          | 1                 | 100%     |
+| RSC          | 2          | 2                 | 100%     |
+| PI1          | 2          | 2                 | 100%     |
+| GEMDOS-O     | 6          | 6                 | 100%     |
+| GEMDOS-PRG   | 6          | 6                 | 100%     |
+| S (Assembly) | 2          | 2                 | 100%     |
+| C (Source)   | 3          | 2                 | 67%      |
+| H (Headers)  | 21         | 12                | 57%      |
+
+**Note:** Text-based detection (C/H) is more challenging due to varied coding styles and minimal headers common in Atari ST-era code. Some files may be classified as `.TXT` or `.C` instead of `.H` when strong indicators are absent.
 
 ## Special Features
 

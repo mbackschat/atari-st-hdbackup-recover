@@ -14,6 +14,7 @@ detectors/
   ├── binary_executables.py   # PRG/TOS/TTP/ACC (0x601A), Turbo-C (0x4EFA), Devpac (FF65)
   ├── rsc_detector.py          # GEM Resource files
   ├── image_detector.py        # All image formats
+  ├── size_based_detector.py   # Size-based binary fallbacks (ART, etc.)
   ├── text_detector.py         # Text/source files
 utils/
   ├── __init__.py
@@ -42,8 +43,12 @@ utils/
 9. **NEOchrome** (NEO) - 32128 bytes + strict header validation
 10. **DEGAS Elite compressed** (PC1/PC2/PC3) - Size check + full decompression to 32000 bytes
 
-### Phase 5: Text Files (Last Resort)
-11. **Text detection** - Weighted scoring system for .C/.H/.S/.RSD/.INF/.PRJ/Makefile/.BAT
+### Phase 5: Size-Based Binary Fallbacks
+11. **ART monochrome bitmaps** - Exactly 32000 bytes + NOT text (640x400, no header)
+12. *(Future size-based formats can be added here)*
+
+### Phase 6: Text Files (Last Resort)
+13. **Text detection** - Weighted scoring system for .C/.H/.S/.RSD/.INF/.PRJ/Makefile/.BAT
 
 ## Implementation Steps
 
@@ -181,7 +186,30 @@ utils/
 - [ ] Extension: `.IMG`
 - [ ] **Confidence: 90** (header only) or 100 (with decode proof)
 
-### Step 5: Text Detectors
+### Step 5: Size-Based Binary Detectors
+
+#### `detectors/size_based_detector.py`
+
+**Purpose**: Detect binary files without headers/magic bytes, using only file size as criterion
+
+**Key features:**
+- [x] `is_text_file(data)` - Text detection (must NOT be text to match)
+- [x] `detect_size_based_binary(data, size)` → tuple
+- [x] Runs AFTER all other binary detectors, BEFORE text detection
+- [x] **Confidence: 60** (size-only heuristic)
+
+**Supported formats:**
+- [x] **ART monochrome bitmaps** (640x400, no header)
+  - Size check: exactly 32000 bytes
+  - Binary check: file must NOT be text
+  - Extension: `.ART`
+  - Confidence: 60 (moderate, size-based only)
+
+**Extensibility:**
+- [ ] Future formats can be added as additional size-based rules
+- [ ] Each rule: exact size + binary check + extension + confidence + reason
+
+### Step 6: Text Detectors
 
 #### `detectors/text_detector.py`
 
@@ -235,7 +263,7 @@ utils/
 
 **Anti-signal checks** to prevent false positives
 
-### Step 6: Main CLI
+### Step 7: Main CLI
 
 #### `filetype-detector.py`
 - [x] Argument parsing:
@@ -262,7 +290,7 @@ utils/
     - **Breakdown by extension** (sorted alphabetically with counts)
   - Example: `.C: 4 files, .H: 3 files, .PI1: 2 files`
 
-### Step 7: Testing
+### Step 8: Testing
 
 #### Test strategy
 - [x] Use testfiles/ folder with subfolder-based organization
@@ -303,7 +331,7 @@ utils/
 - [ ] Truncated files
 - [ ] Files with mixed encodings
 
-### Step 8: Documentation
+### Step 9: Documentation
 - [ ] Update README with usage examples
 - [ ] Document confidence levels and detection criteria
 - [ ] Add troubleshooting section

@@ -21,6 +21,7 @@ from pathlib import Path
 from detectors.rsc_detector import detect_rsc
 from detectors.binary_executables import detect_binary_executable
 from detectors.image_detector import detect_image
+from detectors.size_based_detector import detect_size_based_binary
 from detectors.text_detector import detect_text_type
 
 
@@ -62,7 +63,12 @@ def detect_file_type(file_path):
         if match:
             return match, ext, conf, reason, {}
 
-        # Phase 4: Text files (last resort, scoring-based)
+        # Phase 4: Size-based binary fallbacks (for binary files without headers)
+        match, ext, conf, reason = detect_size_based_binary(data, size)
+        if match:
+            return match, ext, conf, reason, {}
+
+        # Phase 5: Text files (last resort, scoring-based)
         match, ext, conf, reason, extra_info = detect_text_type(data, size)
         if match:
             return match, ext, conf, reason, extra_info

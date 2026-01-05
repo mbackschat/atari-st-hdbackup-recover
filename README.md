@@ -57,7 +57,7 @@ Analyzes the extracted files to determine their actual type and assigns proper A
 - GEMDOS executables (PRG/TOS/TTP/ACC/APP) with 0x601A magic
 - Object files (GEMDOS .O, Turbo-C .TCO, Devpac .O)
 - GEM Resource files (.RSC)
-- Image formats: DEGAS (PI1/PI2/PI3), DEGAS Elite compressed (PC1/PC2/PC3), NEOchrome (.NEO), STAD packed (.PAC), GEM Raster (.IMG)
+- Image formats: DEGAS (PI1/PI2/PI3), DEGAS Elite compressed (PC1/PC2/PC3), NEOchrome (.NEO), STAD packed (.PAC), GEM Raster (.IMG), ART monochrome bitmaps (.ART)
 
 **Text formats:**
 - C source and headers (.C, .H) with embedded filename extraction
